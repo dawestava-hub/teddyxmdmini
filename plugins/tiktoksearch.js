@@ -11,61 +11,65 @@ cmd({
   react: "🎵",
   category: "download",
   filename: __filename
-}, async (conn, mek, m, { from, args, reply, prefix, q }) => {
+}, async (conn, mek, m, { from, reply, q }) => {
 
   try {
     // 1. Check Input
-    if (!q) return reply(`*AP NE TIKTOK VIDEO DOWNLOAD KARNI HAI TO LINK DEIN 🤔*\n\n*TIKTOK ❮LINK/QUERY❯*\n\n*POWERED BY KAMRAN-MD 👑*`);
+    if (!q) return reply(`*🎵 TikTok Downloader*\n\n*Usage:*\n.tiktok <link or query>\n\n*Example:*\n.tiktok https://vt.tiktok.com/...\n.tiktok funny cats\n\n*⚡ TEDDY-XMD*`);
 
-    await m.react("📥");
+    await conn.sendMessage(from, { react: { text: "📥", key: mek.key } });
 
-    // 2. Fetch from TikWM API
-    const apiUrl = `https://tikwm.com/api/`;
-    const response = await axios.post(apiUrl, new URLSearchParams({
-        url: q,  // Agar link hai to link, varna search query
-        count: 1,
-        cursor: 0,
-        hd: 1
-    }));
+    let videoData;
 
-    const data = response.data;
+    // 2. Try direct link first
+    try {
+      const apiUrl = `https://tikwm.com/api/`;
+      const response = await axios.post(apiUrl, new URLSearchParams({
+          url: q,
+          count: 1,
+          cursor: 0,
+          hd: 1
+      }), { timeout: 15000 });
 
-    // Check if video found
-    if (!data || !data.data) {
-        // Agar link nahi hai to ho sakta hai user search kar raha ho
-        const searchRes = await axios.get(`https://tikwm.com/api/feed/search?keywords=${encodeURIComponent(q)}`);
-        if (!searchRes.data.data || !searchRes.data.data.videos) {
-            return reply("*SORRY G, VIDEO NAHI MILI! 😔*");
-        }
-        var videoData = searchRes.data.data.videos[0]; // Pehli video utha li
-    } else {
-        var videoData = data.data; // Direct link wala data
+      if (response.data?.data) {
+        videoData = response.data.data;
+      }
+    } catch (e) {
+      // Ignore, try search next
     }
 
-    // 3. Design Caption
+    // 3. If no direct link, search by keywords
+    if (!videoData) {
+        const searchRes = await axios.get(`https://tikwm.com/api/feed/search?keywords=${encodeURIComponent(q)}`, { timeout: 15000 });
+        if (!searchRes.data?.data?.videos?.length) {
+            await conn.sendMessage(from, { react: { text: "❌", key: mek.key } });
+            return reply("*❌ No videos found. Try a different link or keyword*");
+        }
+        videoData = searchRes.data.data.videos[0];
+    }
+
+    // 4. Design Caption
     let caption = `╭━━━〔 *TIKTOK DOWNLOADER* 〕━━━┈⊷
 ┃
-┃ 👑 *TITLE:* ${videoData.title ? videoData.title.toUpperCase().slice(0, 50) : "TIKTOK VIDEO"}
-┃ 👑 *AUTHOR:* ${videoData.author.nickname.toUpperCase()}
-┃ 👑 *VIEWS:* ${videoData.play_count || "N/A"}
-┃ 👑 *LIKES:* ${videoData.digg_count || "N/A"}
+┃ 🎵 *TITLE:* ${videoData.title ? videoData.title.slice(0, 60) : "TIKTOK VIDEO"}
+┃ 👤 *AUTHOR:* ${videoData.author?.nickname || "Unknown"}
+┃ 👁️ *VIEWS:* ${videoData.play_count ? videoData.play_count.toLocaleString() : "N/A"}
+┃ ❤️ *LIKES:* ${videoData.digg_count ? videoData.digg_count.toLocaleString() : "N/A"}
+┃ ⏱️ *DURATION:* ${videoData.duration || "N/A"}s
 ┃
-╰━━━━━━━━━━━━━━━┈⊷
+╰━━━━━━━━━━━━━━━━━━━━┈⊷
 
-*POWERED BY BILAL-MD* 👑`;
+*⚡ POWERED BY TEDDY-XMD*`;
 
-    // 4. Send Video
+    // 5. Send Video
     await conn.sendMessage(from, { 
-      video: { url: videoData.play || videoData.hdplay }, 
+      video: { url: videoData.hdplay || videoData.play || videoData.wmplay }, 
       caption: caption,
-      fileName: `tiktok.mp4` 
-    }, { quoted: m });
+      fileName: `tiktok-${Date.now()}.mp4` 
+    }, { quoted: mek });
 
-    await m.react("✅");
+    await conn.sendMessage(from, { react: { text: "✅", key: mek.key } });
 
   } catch (e) {
     console.error("TikTok Error:", e);
-    reply("❌ *API DOWN HAI YA LINK SAHI NAHI HAI!*");
-    await m.react("❌");
-  }
-});
+   

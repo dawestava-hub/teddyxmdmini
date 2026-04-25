@@ -51,7 +51,7 @@ cmd({
 *Size:* ${formatBytes(buffer.length)}
 *URL:* ${res.data}
 
-> © Uploaded by DR-MD-MINI 💜`
+> © Uploaded by Teddy Xmd 💜`
     );
 
   } catch (err) {

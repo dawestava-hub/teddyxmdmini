@@ -3,61 +3,46 @@ const axios = require('axios');
 
 cmd({
   pattern: "song3",
-  react: "😇",
+  react: "🎵",
   category: "download",
+  desc: "Search legal music",
   filename: __filename
 }, async (conn, mek, m, { from, q, reply }) => {
   try {
-    if (!q) return reply("*AP NE KOI AUDIO DOWNLOADING KARNI HAI 🤔*\n*TO ESE LIKHO ☺️*\n\n*SONG ❮AUDIO NAME❯*\n\n*JAB AP ESE LIKHO GE 😊 TO APKA AUDIO DOWNLOADING KAR KE 😃 YAHA PER BHEJ DEYA JAYE GA 😍🌹*");
+    if (!q) return reply(
+      "*🎵 Music Search*\n\n" +
+      "*Usage:*\n.song3 <song name>\n\n" +
+      "*Example:*\n.song3 lofi chill\n\n" +
+      "*⚡ TEDDY-XMD*"
+    );
 
-    let ytUrl = q;
+    await conn.sendMessage(from, { react: { text: "⏳", key: mek.key } });
 
-    // 🔍 Agar link nahi hai → search karo
-    if (!q.startsWith("http")) {
-      const searchApi = `https://www.movanest.xyz/v2/ytsearch?query=${encodeURIComponent(q)}`;
-      const searchRes = await axios.get(searchApi);
-      const searchData = searchRes.data;
+    // Example: Use Jamendo API for royalty-free music
+    const apiUrl = `https://api.jamendo.com/v3.0/tracks/?client_id=YOUR_ID&format=json&limit=1&namesearch=${encodeURIComponent(q)}`;
+    const { data } = await axios.get(apiUrl, { timeout: 10000 });
 
-      if (!searchData.status || !searchData.results || searchData.results.length === 0) {
-        return reply("*AUDIO NAHI MIL RAHA 🥺*");
-      }
-
-      ytUrl = searchData.results[0].url; // first result
+    if (!data.results || data.results.length === 0) {
+      await conn.sendMessage(from, { react: { text: "❌", key: mek.key } });
+      return reply("*❌ No results found*");
     }
 
-    // 🎵 MP3 API
-    const apiUrl = `https://www.movanest.xyz/v2/ytmp3?url=${encodeURIComponent(ytUrl)}`;
-    const { data } = await axios.get(apiUrl);
+    const track = data.results[0];
 
-    if (data.status !== true || !data.results) {
-      return reply("*AUDIO NAHI MIL RAHA 🥺*");
-    }
-
-    const meta = data.results.metadata;
-    const dl = data.results.download;
-
-    if (!dl?.url) return reply("*SIRF YOUTUBE VIDEO LINK DO 🤗*");
-
-    // ℹ️ Simple info
     await reply(
-      `*👑 AUDIO INFO 👑*\n\n` +
-      `*👑 AUDIO NAME 👑* \n${meta.title}\n\n` +
-      `*👑 TIKTOK ID 👑* \n ${meta.author.name}\n\n` +
-      `*👑 TIME 👑* \n ${meta.duration.timestamp}\n\n*👑 BY :❯ BILAL-MD 👑*`
+      `*🎵 TRACK INFO*\n\n` +
+      `*📝 Title:* ${track.name}\n` +
+      `*👤 Artist:* ${track.artist_name}\n` +
+      `*⏱️ Duration:* ${track.duration}s\n` +
+      `*🔗 Listen:* ${track.shareurl}\n\n` +
+      `*⚡ TEDDY-XMD*`
     );
 
-    // 🔊 Direct audio
-    await conn.sendMessage(
-      from,
-      {
-        audio: { url: dl.url },
-        mimetype: "audio/mpeg"
-      },
-      { quoted: mek }
-    );
+    await conn.sendMessage(from, { react: { text: "✅", key: mek.key } });
 
   } catch (err) {
     console.log("SONG CMD ERROR:", err);
-    reply("❌ Error aa gaya");
+    await conn.sendMessage(from, { react: { text: "❌", key: mek.key } });
+    reply("*❌ Error occurred*");
   }
 });

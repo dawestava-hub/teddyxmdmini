@@ -6,17 +6,17 @@ const updateConfig = async (key, value, botNumber, config, reply) => {
     try {
         // 1. Update in-memory config (Immediate)
         config[key] = value;
-        
+
         // 2. Update in Database (Persistent)
-        const newConfig = { ...config }; 
+        const newConfig = {...config };
         newConfig[key] = value;
-        
+
         await updateUserConfig(botNumber, newConfig);
-        
-        return reply(`✅ *${key}* has been updated to: *${value}*`);
+
+        return reply(`*✅ ${key}* updated to: *${value}*\n\n*⚡ TEDDY-XMD*`);
     } catch (e) {
         console.error(e);
-        return reply("❌ Error while saving to database.");
+        return reply("*❌ Error saving to database*");
     }
 };
 
@@ -27,32 +27,39 @@ const updateConfig = async (key, value, botNumber, config, reply) => {
 cmd({
     pattern: "autorecording",
     alias: ["autorec", "arecording"],
-    desc: "Enable/Disable auto recording simulation",
+    desc: "Enable/disable auto recording simulation",
     category: "settings",
-    react: "👑"
+    react: "🎙️",
+    use: ".autorecording on/off"
 },
 async(conn, mek, m, { args, isOwner, reply, botNumber, config }) => {
-    if (!isOwner) return reply("*YEH COMMAND SIRF MERE LIE HAI 😎*");
+    if (!isOwner) return reply("*❌ This command is for owner only*");
     const value = args[0]?.toLowerCase();
-    
+
     if (value === 'on' || value === 'true') {
         await updateConfig('AUTO_RECORDING', 'true', botNumber, config, reply);
     } else if (value === 'off' || value === 'false') {
         await updateConfig('AUTO_RECORDING', 'false', botNumber, config, reply);
     } else {
-        reply(`*ABHI :❯ ${config.AUTO_RECORDING} HAI 😊*\n\n*AUTO RECORDING ON KARNE K LIE LIKHO ☺️*\n*👑 ❮AUTORECORDING ON❯ 👑*\n*AUTORECORDING OFF KARNE K LIE LIKHO ☺️*\n*👑 ❮AUTORECORDING OFF❯ 👑*`);
+        reply(
+            `*🎙️ AUTO RECORDING*\n\n` +
+            `*Current:* ${config.AUTO_RECORDING === 'true'? "ON ✅" : "OFF ❌"}\n\n` +
+            `*Usage:*\n.autorecording on\n.autorecording off\n\n` +
+            `*⚡ TEDDY-XMD*`
+        );
     }
 });
 
 cmd({
     pattern: "customreact",
     alias: ["creact"],
-    desc: "Enable/Disable custom auto react to all messages",
+    desc: "Enable/disable custom auto react to all messages",
     category: "settings",
-    react: "✨"
+    react: "✨",
+    use: ".customreact on/off"
 },
 async(conn, mek, m, { args, isOwner, reply, botNumber, config }) => {
-    if (!isOwner) return reply("*YEH COMMAND SIRF OWNER K LIYE HAI 😎*");
+    if (!isOwner) return reply("*❌ This command is for owner only*");
 
     const value = args[0]?.toLowerCase();
 
@@ -61,19 +68,25 @@ async(conn, mek, m, { args, isOwner, reply, botNumber, config }) => {
     } else if (value === 'off' || value === 'false') {
         await updateConfig('CUSTOM_REACT', 'false', botNumber, config, reply);
     } else {
-        reply(`*ABHI :❯ ${config.CUSTOM_REACT} HAI 😊*\n\n✨ ❮CUSTOMREACT ON/OFF❯ ✨`);
+        reply(
+            `*✨ CUSTOM REACT*\n\n` +
+            `*Current:* ${config.CUSTOM_REACT === 'true'? "ON ✅" : "OFF ❌"}\n\n` +
+            `*Usage:*\n.customreact on\n.customreact off\n\n` +
+            `*⚡ TEDDY-XMD*`
+        );
     }
 });
 
 cmd({
     pattern: "ownerreact",
     alias: ["oreact"],
-    desc: "Enable/Disable auto react to owner messages",
+    desc: "Enable/disable auto react to owner messages",
     category: "settings",
-    react: "👑"
+    react: "👑",
+    use: ".ownerreact on/off"
 },
 async(conn, mek, m, { args, isOwner, reply, botNumber, config }) => {
-    if (!isOwner) return reply("*YEH COMMAND SIRF OWNER K LIYE HAI 😎*");
+    if (!isOwner) return reply("*❌ This command is for owner only*");
 
     const value = args[0]?.toLowerCase();
 
@@ -82,60 +95,78 @@ async(conn, mek, m, { args, isOwner, reply, botNumber, config }) => {
     } else if (value === 'off' || value === 'false') {
         await updateConfig('OWNER_REACT', 'false', botNumber, config, reply);
     } else {
-        reply(`*ABHI :❯ ${config.OWNER_REACT} HAI 😊*\n\n👑 ❮OWNERREACT ON/OFF❯ 👑`);
+        reply(
+            `*👑 OWNER REACT*\n\n` +
+            `*Current:* ${config.OWNER_REACT === 'true'? "ON ✅" : "OFF ❌"}\n\n` +
+            `*Usage:*\n.ownerreact on\n.ownerreact off\n\n` +
+            `*⚡ TEDDY-XMD*`
+        );
     }
 });
 
 cmd({
     pattern: "autotyping",
     alias: ["autotype", "atyping"],
-    desc: "Enable/Disable auto typing simulation",
+    desc: "Enable/disable auto typing simulation",
     category: "settings",
-    react: "👑"
+    react: "⌨️",
+    use: ".autotyping on/off"
 },
 async(conn, mek, m, { args, isOwner, reply, botNumber, config }) => {
-    if (!isOwner) return reply("*YEH COMMAND SIRF MERE LIE HAI 😎*");
+    if (!isOwner) return reply("*❌ This command is for owner only*");
     const value = args[0]?.toLowerCase();
-    
+
     if (value === 'on' || value === 'true') {
         await updateConfig('AUTO_TYPING', 'true', botNumber, config, reply);
     } else if (value === 'off' || value === 'false') {
         await updateConfig('AUTO_TYPING', 'false', botNumber, config, reply);
     } else {
-        reply(`*ABHI :❯ ${config.AUTO_TYPING} HAI 😊*\n\n*AUTO TYPING ON KARNE K LIE LIKHO ☺️*\n*👑 ❮AUTOTYPING ON❯ 👑*\n*AUTOTYPING OFF KARNE K LIE LIKHO ☺️*\n*👑 ❮AUTOTYPING OFF❯ 👑*`);
+        reply(
+            `*⌨️ AUTO TYPING*\n\n` +
+            `*Current:* ${config.AUTO_TYPING === 'true'? "ON ✅" : "OFF ❌"}\n\n` +
+            `*Usage:*\n.autotyping on\n.autotyping off\n\n` +
+            `*⚡ TEDDY-XMD*`
+        );
     }
 });
 
 cmd({
     pattern: "autovoice",
     alias: ["avoice", "autovn"],
-    desc: "Enable/Disable auto voice presence",
+    desc: "Enable/disable auto voice presence",
     category: "settings",
-    react: "🎙️"
+    react: "🔊",
+    use: ".autovoice on/off"
 },
 async(conn, mek, m, { args, isOwner, reply, botNumber, config }) => {
-    if (!isOwner) return reply("*YEH COMMAND SIRF MERE LIE HAI 😎*");
-    
+    if (!isOwner) return reply("*❌ This command is for owner only*");
+
     const value = args[0]?.toLowerCase();
-    
+
     if (value === 'on' || value === 'true') {
         await updateConfig('AUTO_VOICE', 'true', botNumber, config, reply);
     } else if (value === 'off' || value === 'false') {
         await updateConfig('AUTO_VOICE', 'false', botNumber, config, reply);
     } else {
-        reply(`*ABHI :❯ ${config.AUTO_VOICE} HAI 😊*\n\n*AUTO VOICE PRESENCE ON KARNE K LIE LIKHO ☺️*\n*👑 ❮AUTOVOICE ON❯ 👑*\n*AUTOVOICE OFF KARNE K LIE LIKHO ☺️*\n*👑 ❮AUTOVOICE OFF❯ 👑*`);
+        reply(
+            `*🔊 AUTO VOICE*\n\n` +
+            `*Current:* ${config.AUTO_VOICE === 'true'? "ON ✅" : "OFF ❌"}\n\n` +
+            `*Usage:*\n.autovoice on\n.autovoice off\n\n` +
+            `*⚡ TEDDY-XMD*`
+        );
     }
 });
 
 cmd({
-    pattern: "mention-reply",
+    pattern: "mentionreply",
     alias: ["mreply", "mentionon"],
-    desc: "Enable/Disable auto reply on mention",
+    desc: "Enable/disable auto reply on mention",
     category: "settings",
-    react: "💬"
+    react: "💬",
+    use: ".mentionreply on/off"
 },
 async(conn, mek, m, { args, isOwner, reply, botNumber, config }) => {
-    if (!isOwner) return reply("*YEH COMMAND SIRF MERE LIE HAI 😎*");
+    if (!isOwner) return reply("*❌ This command is for owner only*");
 
     const value = args[0]?.toLowerCase();
 
@@ -144,10 +175,14 @@ async(conn, mek, m, { args, isOwner, reply, botNumber, config }) => {
     } else if (value === 'off' || value === 'false') {
         await updateConfig('MENTION_REPLY', 'false', botNumber, config, reply);
     } else {
-        reply(`*ABHI :❯ ${config.MENTION_REPLY} HAI 😊*\n\n*MENTION REPLY ON KARNE K LIE LIKHO ☺️*\n*👑 ❮MENTIONREPLY ON❯ 👑*\n*MENTION REPLY OFF KARNE K LIE LIKHO ☺️*\n*👑 ❮MENTIONREPLY OFF❯ 👑*`);
+        reply(
+            `*💬 MENTION REPLY*\n\n` +
+            `*Current:* ${config.MENTION_REPLY === 'true'? "ON ✅" : "OFF ❌"}\n\n` +
+            `*Usage:*\n.mentionreply on\n.mentionreply off\n\n` +
+            `*⚡ TEDDY-XMD*`
+        );
     }
 });
-
 
 // ============================================================
 // 2. CALL MANAGEMENT (Anti-Call)
@@ -155,21 +190,28 @@ async(conn, mek, m, { args, isOwner, reply, botNumber, config }) => {
 
 cmd({
     pattern: "anticall",
-    alias: "acall",
-    desc: "Auto reject calls",
+    alias: ["acall", "rejectcall"],
+    desc: "Auto reject incoming calls",
     category: "settings",
-    react: "👑"
+    react: "📵",
+    use: ".anticall on/off"
 },
 async(conn, mek, m, { args, isOwner, reply, botNumber, config }) => {
-    if (!isOwner) return reply("*YEH COMMAND SIRF MERE LIE HAI ☺️*");
+    if (!isOwner) return reply("*❌ This command is for owner only*");
     const value = args[0]?.toLowerCase();
-    
+
     if (value === 'on' || value === 'true') {
         await updateConfig('ANTI_CALL', 'true', botNumber, config, reply);
     } else if (value === 'off' || value === 'false') {
         await updateConfig('ANTI_CALL', 'false', botNumber, config, reply);
     } else {
-        reply(`*ABHI :❯ ${config.AUTO_RECORDING} HAI 😊*\n\n*JO BHI CALL KARE GA KHUD HI REJECT HO JAYE GE 😃 YE SETTING ON KARNE K LIE LIKHO ☺️*\n*👑 ❮ANTICALL ON❯ 👑*\n*ANTICALL OFF KARNE K LIE LIKHO ☺️*\n*👑 ❮ANTICALL OFF❯ 👑*`);
+        reply(
+            `*📵 ANTI-CALL*\n\n` +
+            `*Current:* ${config.ANTI_CALL === 'true'? "ON ✅" : "OFF ❌"}\n\n` +
+            `*Usage:*\n.anticall on\n.anticall off\n\n` +
+            `_When ON, all incoming calls are auto-rejected_\n\n` +
+            `*⚡ TEDDY-XMD*`
+        );
     }
 });
 
@@ -179,39 +221,53 @@ async(conn, mek, m, { args, isOwner, reply, botNumber, config }) => {
 
 cmd({
     pattern: "welcome",
-    desc: "Enable/Disable welcome messages",
+    desc: "Enable/disable welcome messages",
     category: "settings",
-    react: "👑"
+    react: "👋",
+    use: ".welcome on/off"
 },
 async(conn, mek, m, { args, isOwner, reply, botNumber, config }) => {
-    if (!isOwner) return reply("*YEH COMMAND SIRF MERE LIE HAI 😎*");
+    if (!isOwner) return reply("*❌ This command is for owner only*");
     const value = args[0]?.toLowerCase();
-    
+
     if (value === 'on' || value === 'true') {
         await updateConfig('WELCOME', 'true', botNumber, config, reply);
     } else if (value === 'off' || value === 'false') {
         await updateConfig('WELCOME', 'false', botNumber, config, reply);
     } else {
-        reply(`*ABHI :❯ ${config.WELCOME} HAI 😊*\n\n*JO NEW MEMBER GROUP JOIN KARE GA USKA WELCOME MSG BHEJ DYA JAYE GA 😃 YEH SETTING ON KARNE K LIE LIKHO ☺️*\n*👑 ❮WECOME ON❯ 👑*\n*WELCOME OFF KARNE K LIE LIKHO ☺️*\n*👑 ❮WELCOME OFF❯ 👑*`);
+        reply(
+            `*👋 WELCOME MESSAGE*\n\n` +
+            `*Current:* ${config.WELCOME === 'true'? "ON ✅" : "OFF ❌"}\n\n` +
+            `*Usage:*\n.welcome on\n.welcome off\n\n` +
+            `_Sends welcome message when new members join_\n\n` +
+            `*⚡ TEDDY-XMD*`
+        );
     }
 });
 
 cmd({
     pattern: "goodbye",
-    desc: "Enable/Disable goodbye messages",
+    desc: "Enable/disable goodbye messages",
     category: "settings",
-    react: "👑"
+    react: "👋",
+    use: ".goodbye on/off"
 },
 async(conn, mek, m, { args, isOwner, reply, botNumber, config }) => {
-    if (!isOwner) return reply("*YEH COMMAND SIRF MERE LIE HAI 😎*");
+    if (!isOwner) return reply("*❌ This command is for owner only*");
     const value = args[0]?.toLowerCase();
-    
+
     if (value === 'on' || value === 'true') {
         await updateConfig('GOODBYE', 'true', botNumber, config, reply);
     } else if (value === 'off' || value === 'false') {
         await updateConfig('GOODBYE', 'false', botNumber, config, reply);
     } else {
-        reply(`*ABHI :❯ ${config.GOODBYE} HAI 😊*\n\n*JO MEMBER GROUP LEFT KARE GA USKA GOODBYE MSG BHEJ DYA JAYE GA 😃 YEH SETTING ON KARNE K LIE LIKHO ☺️*\n*👑 ❮GOODBYE ON❯ 👑*\n*GOODBYE OFF KARNE K LIE LIKHO ☺️*\n*👑 ❮GOODBYE OFF❯ 👑*`);
+        reply(
+            `*👋 GOODBYE MESSAGE*\n\n` +
+            `*Current:* ${config.GOODBYE === 'true'? "ON ✅" : "OFF ❌"}\n\n` +
+            `*Usage:*\n.goodbye on\n.goodbye off\n\n` +
+            `_Sends goodbye message when members leave_\n\n` +
+            `*⚡ TEDDY-XMD*`
+        );
     }
 });
 
@@ -221,60 +277,81 @@ async(conn, mek, m, { args, isOwner, reply, botNumber, config }) => {
 
 cmd({
     pattern: "autoread",
-    desc: "Enable/Disable auto read messages (Blue Tick)",
+    alias: ["readmessage", "bluetick"],
+    desc: "Enable/disable auto read messages (Blue Tick)",
     category: "settings",
-    react: "👀"
+    react: "👀",
+    use: ".autoread on/off"
 },
 async(conn, mek, m, { args, isOwner, reply, botNumber, config }) => {
-    if (!isOwner) return reply("*YEH COMMAND SIRF MERE LIE HAI 😎*");
+    if (!isOwner) return reply("*❌ This command is for owner only*");
     const value = args[0]?.toLowerCase();
-    
+
     if (value === 'on' || value === 'true') {
         await updateConfig('READ_MESSAGE', 'true', botNumber, config, reply);
     } else if (value === 'off' || value === 'false') {
         await updateConfig('READ_MESSAGE', 'false', botNumber, config, reply);
     } else {
-        reply(`*ABHI ${config.READ_MESSAGE} HAI 😊*\n*JO BHI MSG KARE GA USKA MSG KHUD HI SEEN `);
+        reply(
+            `*👀 AUTO READ*\n\n` +
+            `*Current:* ${config.READ_MESSAGE === 'true'? "ON ✅" : "OFF ❌"}\n\n` +
+            `*Usage:*\n.autoread on\n.autoread off\n\n` +
+            `_Auto-marks all messages as read_\n\n` +
+            `*⚡ TEDDY-XMD*`
+        );
     }
 });
 
 cmd({
-    pattern: "autoviewsview",
+    pattern: "autostatusview",
     alias: ["avs", "statusseen", "astatus"],
     desc: "Auto view status updates",
     category: "settings",
-    react: "😎"
+    react: "👁️",
+    use: ".autostatusview on/off"
 },
 async(conn, mek, m, { args, isOwner, reply, botNumber, config }) => {
-    if (!isOwner) return reply("*YEH COMMAND SIRF MERE LIE HAI 😎*");
+    if (!isOwner) return reply("*❌ This command is for owner only*");
     const value = args[0]?.toLowerCase();
-    
+
     if (value === 'on' || value === 'true') {
         await updateConfig('AUTO_VIEW_STATUS', 'true', botNumber, config, reply);
     } else if (value === 'off' || value === 'false') {
         await updateConfig('AUTO_VIEW_STATUS', 'false', botNumber, config, reply);
     } else {
-        reply(`*ABHI ${config.AUTO_VIEW_STATUS} HAI 😊*\n\n*JO BHI STATUS LAGAYE GA KHUD HI SEEN HO JAYE GA 😃 YEH SETTING ON KARNE K LIE LIKHO ☺️*\n*👑 ❮AUTOSTATUSVIEW ON❯ 👑*\n*OFF KARNE KE LIE LIKHO ☺️*\n*👑 ❮AUTOSTATUSVIEW OFF❯ 👑*`);
+        reply(
+            `*👁️ AUTO STATUS VIEW*\n\n` +
+            `*Current:* ${config.AUTO_VIEW_STATUS === 'true'? "ON ✅" : "OFF ❌"}\n\n` +
+            `*Usage:*\n.autostatusview on\n.autostatusview off\n\n` +
+            `_Auto-views all status updates_\n\n` +
+            `*⚡ TEDDY-XMD*`
+        );
     }
 });
 
 cmd({
     pattern: "autolikestatus",
-    alias: ["als"],
+    alias: ["als", "statuslike"],
     desc: "Auto like status updates",
     category: "settings",
-    react: "❤️"
+    react: "❤️",
+    use: ".autolikestatus on/off"
 },
 async(conn, mek, m, { args, isOwner, reply, botNumber, config }) => {
-    if (!isOwner) return reply("🚫 Owner only!");
+    if (!isOwner) return reply("*❌ This command is for owner only*");
     const value = args[0]?.toLowerCase();
-    
+
     if (value === 'on' || value === 'true') {
         await updateConfig('AUTO_LIKE_STATUS', 'true', botNumber, config, reply);
     } else if (value === 'off' || value === 'false') {
         await updateConfig('AUTO_LIKE_STATUS', 'false', botNumber, config, reply);
     } else {
-        reply(`Current Status: ${config.AUTO_LIKE_STATUS}\nUsage: .autolikestatus on/off`);
+        reply(
+            `*❤️ AUTO LIKE STATUS*\n\n` +
+            `*Current:* ${config.AUTO_LIKE_STATUS === 'true'? "ON ✅" : "OFF ❌"}\n\n` +
+            `*Usage:*\n.autolikestatus on\n.autolikestatus off\n\n` +
+            `*⚡ TEDDY-XMD*`
+        );
     }
 });
 
@@ -286,37 +363,53 @@ cmd({
     pattern: "mode",
     desc: "Change bot mode (public/private/groups/inbox)",
     category: "settings",
-    react: "⚙️"
+    react: "⚙️",
+    use: ".mode <public/private/groups/inbox>"
 },
 async(conn, mek, m, { args, isOwner, reply, botNumber, config }) => {
-    if (!isOwner) return reply("*YEH COMMAND SIRF MERE LIE HAI 😎*");
+    if (!isOwner) return reply("*❌ This command is for owner only*");
     const mode = args[0]?.toLowerCase();
     const validModes = ['public', 'private', 'groups', 'inbox'];
 
     if (validModes.includes(mode)) {
         await updateConfig('WORK_TYPE', mode, botNumber, config, reply);
     } else {
-        reply(`*GHALAT LIKHA HAI 🥺*\n*ESE LIKHO ☺️*COMMAND ❮MODE❯ LIKH KER IN ME SE KOI EK WORD LIKHO JAHA AP CHAHTE HO K BOT WORK KRE 🤗*\n ${validModes.join(', ')}\nCurrent: ${config.WORK_TYPE}`);
+        reply(
+            `*⚙️ BOT MODE*\n\n` +
+            `*Current:* ${config.WORK_TYPE}\n\n` +
+            `*Valid modes:* ${validModes.join(', ')}\n\n` +
+            `*Usage:*\n.mode public\n.mode private\n.mode groups\n.mode inbox\n\n` +
+            `*⚡ TEDDY-XMD*`
+        );
     }
 });
 
 cmd({
     pattern: "setprefix",
+    alias: ["prefix"],
     desc: "Change bot prefix",
     category: "settings",
-    react: "👑"
+    react: "🔣",
+    use: ".setprefix <symbol>"
 },
 async(conn, mek, m, { args, isOwner, reply, botNumber, config }) => {
-    if (!isOwner) return reply("*YEH COMMAND SIRF MERE LIE HAI 😎*");
+    if (!isOwner) return reply("*❌ This command is for owner only*");
     const newPrefix = args[0];
 
     if (newPrefix) {
         // Ensure prefix is short (single character or short string)
-        if (newPrefix.length > 1 && newPrefix !== 'noprefix') return reply("❌ Prefix must be short (e.g. . or ! or #)");
-        
+        if (newPrefix.length > 2 && newPrefix!== 'noprefix') {
+            return reply("*❌ Prefix must be 1-2 characters*\n_Example:.! # /_");
+        }
+
         await updateConfig('PREFIX', newPrefix, botNumber, config, reply);
     } else {
-        reply(`*ABHI PREFIX ❮ ${config.PREFIX} ❯ HAI ☺️*\nJIS BHI NISHAN AP BOT CHALANA CHAHTE HAI WO NISHAN SET KERE ESE 😊*\n*❮SETPREFIX . ! + _ -❯*\n*JO BHI APKA DIL KARE 😍❣️*`);
+        reply(
+            `*🔣 SET PREFIX*\n\n` +
+            `*Current:* ${config.PREFIX}\n\n` +
+            `*Usage:*\n.setprefix.\n.setprefix!\n.setprefix #\n\n` +
+            `_Set the symbol used before commands_\n\n` +
+            `*⚡ TEDDY-XMD*`
+        );
     }
 });
-

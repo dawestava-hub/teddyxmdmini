@@ -3,9 +3,9 @@ const { fetchGif, gifToSticker } = require('../lib/sticker-utils')
 
 cmd({
     pattern: "attp",
-    alias: ["attptext", "textsticker", "namesticker", "stickername", "at", "att", "atp"],
+    alias: ["textsticker", "animtext", "atp"],
     react: "✨",
-    desc: "Convert text into animated sticker",
+    desc: "Convert text to animated sticker",
     category: "sticker",
     use: ".attp <text>",
     filename: __filename
@@ -14,13 +14,15 @@ async (conn, mek, m, { args, reply }) => {
     try {
         if (!args[0]) {
             return reply(
-                "*🥺 APKO APKE NAME KA STICKER BANANA HAI*\n\n" +
-                "*Use:* `.attp APKA NAME`\n\n" +
-                "*Example:*\n.attp Bilal"
+                "*✨ TEXT TO STICKER*\n\n" +
+                "*Usage:*\n.attp <your text>\n\n" +
+                "*Example:*\n.attp TEDDY-XMD\n\n" +
+                "*⚡ TEDDY-XMD*"
             )
         }
 
-        reply("*✨ APKA STICKER BAN RAHA HAI*\n*THORA SA INTAZAR KARE...☺️*")
+        await conn.sendMessage(m.chat, { react: { text: "⏳", key: mek.key } })
+        reply("*✨ Creating your sticker...*\n_Please wait a few seconds_")
 
         const text = encodeURIComponent(args.join(" "))
         const gifBuffer = await fetchGif(
@@ -35,8 +37,11 @@ async (conn, mek, m, { args, reply }) => {
             { quoted: mek }
         )
 
+        await conn.sendMessage(m.chat, { react: { text: "✅", key: mek.key } })
+
     } catch (e) {
         console.log("ATTP ERROR:", e)
-        reply("*❌ STICKER BANANE ME ERROR AYA 🥺*")
+        await conn.sendMessage(m.chat, { react: { text: "❌", key: mek.key } })
+        reply("*❌ Failed to create sticker*\n_API might be down_")
     }
 })

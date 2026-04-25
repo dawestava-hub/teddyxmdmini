@@ -1,5 +1,5 @@
 //---------------------------------------------------------------------------
-//           KAMRAN-MD - AI TEXT TO MEDIA (TXT2IMG / TXT2VID)
+//           TEDDY-XMD - AI TEXT TO MEDIA (TXT2IMG / TXT2VID)
 //---------------------------------------------------------------------------
 
 const { cmd } = require('../inconnuboy');
@@ -7,13 +7,13 @@ const axios = require('axios');
 const FormData = require('form-data');
 const config = require('../config');
 
-// Newsletter Context for professional branding
+// Newsletter Context for TEDDY-XMD branding
 const newsletterContext = {
     forwardingScore: 999,
     isForwarded: true,
     forwardedNewsletterMessageInfo: {
-        newsletterJid: '120363418144382782@newsletter',
-        newsletterName: 'ᴅʀ-ᴍᴅ-ᴍɪɴɪ',
+        newsletterJid: '120363421104812135@newsletter',
+        newsletterName: 'TEDDY-XMD OFFICIAL',
         serverMessageId: 143
     }
 };
@@ -23,7 +23,7 @@ const AgungDevX = {
     base: 'https://text2video.aritek.app',
     cipher: 'hbMcgZLlzvghRlLbPcTbCpfcQKM0PcU0zhPcTlOFMxBZ1oLmruzlVp9remPgi0QWP0QW',
     shift: 3,
-    ua: 'AgungDevX Coder/1.0.0'
+    ua: 'TeddyXMD/2.0.0'
   },
 
   _decryptToken() {
@@ -103,13 +103,13 @@ const AgungDevX = {
 
 cmd({
     pattern: "img",
-    alias: ["t2img", "aiimg"],
+    alias: ["t2img", "aiimg", "txt2img"],
     desc: "Generate AI Image from text",
     category: "ai",
     react: "🎨",
     filename: __filename,
 }, async (conn, mek, m, { from, text, reply }) => {
-    if (!text) return reply("🧠 *Txt Ai Image*\n\nExample: `.txt2img anime girl in forest` ");
+    if (!text) return reply("🧠 *AI Image Generator*\n\n*Usage:*\n.img <prompt>\n\n*Example:*\n.img anime girl in forest");
     
     try {
         await conn.sendMessage(from, { react: { text: "⏳", key: mek.key } });
@@ -117,39 +117,42 @@ cmd({
         
         await conn.sendMessage(from, { 
             image: { url: img }, 
-            caption: `*🎨 AI Image Generated*\n\n*Prompt:* ${text}\n\n*🚀 Powered by ᴅʀ-ᴍᴅ-ᴍɪɴɪ*`,
+            caption: `*🎨 AI Image Generated*\n\n*Prompt:* ${text}\n\n*⚡ Powered by TEDDY-XMD*`,
             contextInfo: newsletterContext
         }, { quoted: mek });
         
         await conn.sendMessage(from, { react: { text: "✅", key: mek.key } });
     } catch (e) {
-        reply(`❌ Error: ${e}`);
+        console.log("IMG CMD ERROR:", e);
+        reply(`❌ *Error:* ${e.toString().replace('Error: ', '')}`);
     }
 });
 
 cmd({
     pattern: "aivid",
-    alias: ["t2vid", "aivideo"],
+    alias: ["t2vid", "aivideo", "txt2vid"],
     desc: "Generate AI Video from text",
     category: "ai",
     react: "🎬",
     filename: __filename,
 }, async (conn, mek, m, { from, text, reply }) => {
-    if (!text) return reply("🧠 *Txt Ai Video*\n\nExample: `.txt2vid cinematic sunset` ");
+    if (!text) return reply("🧠 *AI Video Generator*\n\n*Usage:*\n.aivid <prompt>\n\n*Example:*\n.aivid cinematic sunset over ocean");
     
     try {
         await conn.sendMessage(from, { react: { text: "⏳", key: mek.key } });
+        reply("*⏳ Generating video... This may take 30-60 seconds*");
+        
         const vid = await AgungDevX.text2video(text);
         
         await conn.sendMessage(from, { 
             video: { url: vid }, 
-            caption: `*🎬 AI Video Generated*\n\n*Prompt:* ${text}\n\n*🚀 Powered by ᴅʀ-ᴍᴅ-ᴍɪɴɪ*`,
+            caption: `*🎬 AI Video Generated*\n\n*Prompt:* ${text}\n\n*⚡ Powered by TEDDY-XMD*`,
             contextInfo: newsletterContext
         }, { quoted: mek });
         
         await conn.sendMessage(from, { react: { text: "✅", key: mek.key } });
     } catch (e) {
-        reply(`❌ Error: ${e}`);
+        console.log("AIVID CMD ERROR:", e);
+        reply(`❌ *Error:* ${e.toString().replace('Error: ', '')}`);
     }
 });
-                               

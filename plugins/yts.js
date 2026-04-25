@@ -4,7 +4,7 @@ const yts = require('yt-search')
 cmd({
     pattern: "yts",
     alias: ["ytsearch"],
-    react: "☺️",
+    react: "🔍",
     desc: "Search videos on YouTube",
     category: "search",
     use: ".yts <video name>",
@@ -14,8 +14,8 @@ async (conn, mek, m, { from, q, reply }) => {
     try {
         if (!q) {
             return reply(
-                "*🔍 AP NE YOUTUBE KI VIDEOS SEARCH KARNI HAI 🥺*\n\n" +
-                "*Use:*\n.yts Video name\n\n" +
+                "*🔍 Enter a video name to search on YouTube*\n\n" +
+                "*Usage:*\n.yts Video name\n\n" +
                 "*Example:*\n.yts Tajdar e Haram"
             )
         }
@@ -24,7 +24,7 @@ async (conn, mek, m, { from, q, reply }) => {
         const videos = search.videos.slice(0, 10) // top 10 results
 
         if (videos.length === 0) {
-            return reply("*❌ KOI VIDEO NAHI MILI 🥺*")
+            return reply("*❌ No videos found for your search*")
         }
 
         let text = "*📺 YOUTUBE SEARCH RESULTS 📺*\n\n"
@@ -40,7 +40,7 @@ async (conn, mek, m, { from, q, reply }) => {
 `
         }
 
-        text += "*👑 BILAL-MD WHATSAPP BOT 👑*"
+        text += "*👑 TEDDY-XMD WHATSAPP BOT 👑*"
 
         await conn.sendMessage(
             from,
@@ -50,6 +50,6 @@ async (conn, mek, m, { from, q, reply }) => {
 
     } catch (e) {
         console.log("YTS ERROR:", e)
-        reply("*❌ YOUTUBE SEARCH ME ERROR AYA 🥺*")
+        reply("*❌ An error occurred while searching YouTube*")
     }
 })

@@ -4,71 +4,80 @@ const axios = require('axios')
 
 cmd({
     pattern: "tts",
-    react: "☺️",
+    alias: ["speak", "say"],
+    react: "🔊",
     desc: "Convert text to voice",
     category: "fun",
     filename: __filename
 },
 async (conn, mek, m, { from, q, args, reply }) => {
     try {
-        // 🟡 MANUAL REACT (VERY IMPORTANT)
         await conn.sendMessage(from, {
-            react: { text: "☺️", key: m.key }
+            react: { text: "🔊", key: mek.key }
         })
 
         if (!q) {
             return reply(
-                "*🗣️ AP NE TEXT KI VOICE BANANI HAI 🥺*\n\n" +
-                "*Use:*\n.tts Hello how are you\n\n" +
-                "*Urdu ke liye:*\n.tts ur السلام علیکم"
+                "*🗣️ Text to Speech*\n\n" +
+                "*Usage:*\n.tts Hello how are you\n\n" +
+                "*For Urdu:*\n.tts ur السلام علیکم\n\n" +
+                "*Supported:* en, ur, hi, ar, fr, es, etc"
             )
         }
 
-        // 🌍 Language select
+        // Language select
         let lang = "en"
         let text = q
 
-        if (args[0] === "ur" || args[0] === "urdu") {
-            lang = "ur"
+        if (args[0] && args[0].length === 2) {
+            lang = args[0].toLowerCase()
             text = args.slice(1).join(" ")
         }
 
         if (!text) {
-            return reply("*❌ TEXT KHALI HAI 🥺*")
+            return reply("*❌ Please provide text to convert*")
         }
 
-        // 🎙️ Google TTS URL
+        if (text.length > 200) {
+            return reply("*❌ Text too long. Max 200 characters allowed*")
+        }
+
+        // Generate TTS URL
         const audioUrl = googleTTS.getAudioUrl(text, {
-            lang,
+            lang: lang,
             slow: false,
             host: "https://translate.google.com"
         })
 
-        // ⬇️ Download audio
+        // Download audio
         const res = await axios.get(audioUrl, {
             responseType: "arraybuffer"
         })
 
         const audioBuffer = Buffer.from(res.data)
 
-        // 📤 SEND AUDIO
+        // Send audio
         await conn.sendMessage(
             from,
             {
                 audio: audioBuffer,
                 mimetype: "audio/mp4",
-                ptt: false
+                ptt: true
             },
             { quoted: mek }
         )
+
+        await conn.sendMessage(from, {
+            react: { text: "✅", key: mek.key }
+        })
 
     } catch (e) {
         console.log("TTS ERROR:", e)
 
         await conn.sendMessage(from, {
-            react: { text: "😔", key: m.key }
+            react: { text: "❌", key: mek.key }
         })
 
-        reply("*❌ VOICE BANANE ME ERROR AYA 🥺*")
+        reply("*❌ Failed to generate voice. Check language code or try shorter text*")
     }
 })

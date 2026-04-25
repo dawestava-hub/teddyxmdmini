@@ -10,44 +10,40 @@ const AXIOS_DEFAULTS = {
     }
 };
 
-// ✅ SAME API AS DRAMA
 async function getYupra(url) {
     try {
         const api = `https://api.yupra.my.id/api/downloader/ytmp4?url=${encodeURIComponent(url)}`;
         const res = await axios.get(api, AXIOS_DEFAULTS);
         const d = res?.data?.data || {};
         return d.download_url || null;
-    } catch {
+    } catch (e) {
+        console.log("Yupra API Error:", e.message);
         return null;
     }
 }
 
 cmd({
     pattern: "video",
-    alias: ["mp4"],
-    desc: "Download video by name",
+    alias: ["mp4", "ytmp4"],
+    desc: "Download video from YouTube by name",
     category: "download",
     react: "🎬",
     filename: __filename
-}, async (sock, message, m, { q }) => {
+}, async (sock, message, m, { from, q, reply }) => {
 
     const query = q ? q.trim() : "";
     if (!query)
-        return await sock.sendMessage(
-            message.chat,
-            { text: "Please provide a song name!" },
-            { quoted: message }
-        );
+        return reply("*🔍 Please provide a video name*\n\n*Example:*\n.video Tajdar e Haram");
 
     try {
         const search = await yts(query);
         const video = search.videos[0];
-        if (!video) return;
+        if (!video) return reply("*❌ No videos found for your search*");
 
-        const customName = "⚡ᴘᴏᴡᴇʀᴇᴅ ʙʏ BILAL-ᴍᴅ-ᴍɪɴɪ⚡";
+        const brandName = "⚡ POWERED BY TEDDY-XMD ⚡";
 
-        // Thumbnail + info (same style)
-        await sock.sendMessage(message.chat, {
+        // Send thumbnail + info first
+        await sock.sendMessage(from, {
             image: { url: video.thumbnail },
             caption:
 `*${video.title}*
@@ -55,22 +51,24 @@ cmd({
 🎥 *Channel:* ${video.author.name}
 👁️ *Views:* ${video.views.toLocaleString()}
 ⏳ *Duration:* ${video.timestamp}
+🔗 *Link:* ${video.url}
 
-> *${customName}*`
+> *${brandName}*`
         }, { quoted: message });
 
-        // Download link from Yupra
+        // Get download link
         const downUrl = await getYupra(video.url);
-        if (!downUrl) return;
+        if (!downUrl) return reply("*❌ Failed to get download link. Try again later*");
 
         // Send video
-        await sock.sendMessage(message.chat, {
+        await sock.sendMessage(from, {
             video: { url: downUrl },
             mimetype: "video/mp4",
-            caption: `*${video.title}*\n\n> *${customName}*`
+            caption: `*${video.title}*\n\n> *${brandName}*`
         }, { quoted: message });
 
-    } catch {
-        // no extra messages
+    } catch (e) {
+        console.log("VIDEO CMD ERROR:", e);
+        reply("*❌ An error occurred while downloading the video*");
     }
 });

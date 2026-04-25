@@ -3,16 +3,16 @@ const { cmd } = require('../inconnuboy');
 cmd({
   pattern: "unblock",
   alias: ["unb", "unblk", "unblok"],
-  react: "🥰",
+  react: "✅",
   category: "owner",
-  desc: "Unblock user (reply or inbox)",
+  desc: "Unblock a user via reply or inbox",
   filename: __filename
 }, async (conn, mek, m, { from, reply, isOwner }) => {
   try {
 
     // 🔒 Owner only
     if (!isOwner) {
-      return reply("*YEH COMMAND SIRF OWNER KE LIYE HAI 😎*");
+      return reply("*❌ This command is for owner only*");
     }
 
     let jid;
@@ -21,24 +21,24 @@ cmd({
     if (m.quoted) {
       jid = m.quoted.sender;
     }
-    // 📌 Inbox case
+    // 📌 Private chat case
     else if (from.endsWith("@s.whatsapp.net")) {
       jid = from;
     } 
     else {
-      return reply("*UNBLOCK KARNE KE LIYE KISI MESSAGE PAR REPLY KARO YA INBOX ME LIKHO ☺️*");
+      return reply("*ℹ️ Reply to a user's message or use this command in private chat to unblock*");
     }
 
     await conn.updateBlockStatus(jid, "unblock");
 
     await conn.sendMessage(from, {
-      react: { text: "🥰", key: mek.key }
+      react: { text: "✅", key: mek.key }
     });
 
-    reply(`*MENE APKO UNBLOCK KAR DIYA HAI ☺️*`, { mentions: [jid] });
+    reply(`*✅ Successfully unblocked* @${jid.split('@')[0]}`, { mentions: [jid] });
 
   } catch (e) {
     console.log("UNBLOCK ERROR:", e);
-    reply("*❌ UNBLOCK NAHI HO PAYA 😔*");
+    reply("*❌ Failed to unblock user. Make sure the user exists*");
   }
 });

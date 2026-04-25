@@ -72,7 +72,7 @@ cmd(
 1️⃣ *Video (MP4)*
 2️⃣ *Audio (MP3)*
 
-> © ᴘᴏᴡᴇʀᴇᴅ ʙʏ BILAL-ᴍᴅ`;
+> © Powered by Teddy Tech`;
 
       const sentMsg = await conn.sendMessage(from, { image: { url: ytdata.thumbnail || ytdata.image }, caption }, { quoted: mek });
       const messageID = sentMsg.key.id;

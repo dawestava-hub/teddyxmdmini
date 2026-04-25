@@ -3,10 +3,10 @@ const axios = require('axios')
 
 cmd({
     pattern: "trt",
-    alias: ["translate"],
-    react: "🥺",
+    alias: ["translate", "tr"],
+    react: "🌍",
     desc: "Translate text between languages",
-    category: "other",
+    category: "utility",
     use: ".trt <lang> <text>",
     filename: __filename
 },
@@ -17,15 +17,23 @@ async (conn, mek, m, { q, reply }) => {
         const guide =
 `*🌍 TRANSLATE GUIDE 🌍*
 
-*Use:*
+*Usage:*
+.trt <language_code> <text>
 .trt ur Hello how are you
 .trt en السلام علیکم
 
-*Languages:*
-• ur = Urdu
+*Popular Language Codes:*
 • en = English
+• ur = Urdu
+• hi = Hindi
+• ar = Arabic
+• es = Spanish
+• fr = French
+• de = German
+• ja = Japanese
+• zh = Chinese
 
-*👑 BILAL-MD WHATSAPP BOT 👑*`
+*⚡ TEDDY-XMD WHATSAPP BOT ⚡*`
 
         // ❌ No input
         if (!q) {
@@ -37,39 +45,54 @@ async (conn, mek, m, { q, reply }) => {
         // ❌ Wrong format
         if (parts.length < 2) {
             return reply(
-`*❌ GALAT FORMAT 🥺*
+`*❌ Invalid Format*
 
-*Use:*
-.trt ur Your English text
-.trt en Urdu text`
+*Usage:*
+.trt <language_code> <text>
+
+*Example:*
+.trt ur Hello world
+.trt en السلام علیکم`
             )
         }
 
         const lang = parts[0].toLowerCase()
         const text = parts.slice(1).join(" ")
 
-        // 🌐 Translation API
-        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${lang}`
-        const res = await axios.get(url)
+        if (text.length > 500) {
+            return reply("*❌ Text too long. Max 500 characters allowed*")
+        }
+
+        await conn.sendMessage(m.chat, { react: { text: "⏳", key: mek.key } })
+
+        // 🌐 Translation API - auto detect source language
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=auto|${lang}`
+        const res = await axios.get(url, { timeout: 10000 })
 
         if (!res.data?.responseData?.translatedText) {
-            return reply("*❌ TRANSLATE NAHI HO SAKA 🥺*")
+            await conn.sendMessage(m.chat, { react: { text: "❌", key: mek.key } })
+            return reply("*❌ Translation failed. Check language code or try again*")
         }
 
         const translated = res.data.responseData.translatedText
+        const detectedLang = res.data.responseData.detectedLanguage || "auto"
+
+        await conn.sendMessage(m.chat, { react: { text: "✅", key: mek.key } })
 
         reply(
-`*✅ TRANSLATION COMPLETE ☺️*
+`*✅ TRANSLATION COMPLETE*
 
+*From:* ${detectedLang.toUpperCase()} → ${lang.toUpperCase()}
 *━━━━━━━━━━━━━━━*
 ${translated}
 *━━━━━━━━━━━━━━━*
 
-*👑 BILAL-MD WHATSAPP BOT 👑*`
+*⚡ TEDDY-XMD*`
         )
 
     } catch (e) {
         console.log("TRT ERROR:", e)
-        reply("*❌ TRANSLATE KARNE ME ERROR AYA 🥺*")
+        await conn.sendMessage(m.chat, { react: { text: "❌", key: mek.key } })
+        reply("*❌ Error occurred while translating. API may be down*")
     }
 })

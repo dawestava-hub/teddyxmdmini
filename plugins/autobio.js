@@ -3,17 +3,17 @@ const config = require('../config');
 
 cmd({
   pattern: "autobio",
-  alias: ["bioauto", "setautobio"],
-  react: "😎",
+  alias: ["bioauto", "setautobio", "autostatus"],
+  react: "🔄",
   category: "owner",
-  desc: "Auto bio on/off",
+  desc: "Enable/disable auto bio with uptime",
   filename: __filename
 }, async (conn, mek, m, { from, q, reply, isOwner }) => {
   try {
 
     // 🔐 Owner only
     if (!isOwner) {
-      return reply("*YEH COMMAND SIRF OWNER KE LIYE HAI 😎*");
+      return reply("*❌ This command is for owner only*");
     }
 
     const state = q?.toLowerCase();
@@ -21,11 +21,12 @@ cmd({
     // ❓ Help / status
     if (!state || !["on", "off"].includes(state)) {
       return reply(
-        `*AUTO BIO COMMAND 🥰*\n
-➤ *.autobio on*
-➤ *.autobio off*
-
-📌 *ABHI AUTOBIO:* ${global.autoBio ? "ON ✅" : "OFF ❌"}`
+        `*🔄 AUTO BIO*\n\n` +
+        `*Usage:*\n` +
+        `• ${config.PREFIX}autobio on\n` +
+        `• ${config.PREFIX}autobio off\n\n` +
+        `*Current Status:* ${global.autoBio ? "ON ✅" : "OFF ❌"}\n\n` +
+        `*⚡ TEDDY-XMD*`
       );
     }
 
@@ -34,16 +35,16 @@ cmd({
 
     if (global.autoBio) {
       updateBio(conn);
+      return reply("*✅ Auto bio enabled*\n_Bio will update every 1 minute_");
+    } else {
+      return reply("*❌ Auto bio disabled*");
     }
-
-    return reply(`*AUTO BIO AB ${state.toUpperCase()} HO GAYI HAI ☺️*`);
 
   } catch (e) {
     console.log("AUTOBIO ERROR:", e);
-    reply("*❌ Error aa gaya*");
+    reply("*❌ Failed to update auto bio*");
   }
 });
-
 
 // ================= BIO UPDATER =================
 async function updateBio(conn) {
@@ -51,9 +52,9 @@ async function updateBio(conn) {
 
   try {
     const uptime = clockString(process.uptime() * 1000);
-    const botname = config.BOT_NAME || "DR-MD";
+    const botname = config.BOT_NAME || "TEDDY-XMD";
 
-    const bio = `👑 ${botname} ACTIVE (${uptime}) 👑`;
+    const bio = `⚡ ${botname} ACTIVE | ${uptime}`;
     await conn.updateProfileStatus(bio);
 
     console.log("✅ BIO UPDATED:", bio);
@@ -65,7 +66,6 @@ async function updateBio(conn) {
   setTimeout(() => updateBio(conn), 60 * 1000);
 }
 
-
 // ================= TIME FORMAT =================
 function clockString(ms) {
   const d = Math.floor(ms / 86400000);
@@ -74,9 +74,9 @@ function clockString(ms) {
   const s = Math.floor(ms / 1000) % 60;
 
   let str = "";
-  if (d) str += `${d}D `;
-  if (h) str += `${h}H `;
-  if (m) str += `${m}M `;
-  if (s) str += `${s}S`;
+  if (d) str += `${d}d `;
+  if (h) str += `${h}h `;
+  if (m) str += `${m}m `;
+  if (s) str += `${s}s`;
   return str.trim();
 }

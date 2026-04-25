@@ -61,30 +61,37 @@ async function isBotAdmin(conn, chatId) {
 
 cmd({
     pattern: "antilink",
-    desc: "Anti-link system ko on ya off karein.",
+    alias: ["linkprotect", "nolinks"],
+    desc: "Turn anti-link system on or off",
     category: "admin",
     use: ".antilink on/off",
     filename: __filename
 }, async (conn, m, store, { from, args, reply, isGroup, sender }) => {
     try {
-        if (!isGroup) return reply("❌ Ye command sirf groups mein use kiya ja sakta hai.");
-        
-        const senderIsAdmin = await isUserAdmin(conn, from, sender);
-        if (!senderIsAdmin) return reply("❌ Sirf group admins hi ise ON/OFF kar sakte hain.");
+        if (!isGroup) return reply("*❌ This command only works in groups*");
 
-        if (!args[0]) return reply("Usage: `.antilink on` ya `.antilink off`.");
+        const senderIsAdmin = await isUserAdmin(conn, from, sender);
+        if (!senderIsAdmin) return reply("*❌ Only group admins can use this command*");
+
+        if (!args[0]) return reply(
+            `*🔗 ANTI-LINK*\n\n` +
+            `*Usage:*\n.antilink on\n.antilink off\n\n` +
+            `*Current Status:* ${config.ANTI_LINK === 'true' || config.ANTI_LINK === true? "ON ✅" : "OFF ❌"}\n\n` +
+            `*⚡ TEDDY-XMD*`
+        );
 
         if (args[0].toLowerCase() === 'on') {
             config.ANTI_LINK = 'true';
-            return reply("✅ *Anti-link Protection active ho gayi hai.*");
+            return reply("*✅ Anti-link protection enabled*\n_Links will be auto-deleted and sender removed_");
         } else if (args[0].toLowerCase() === 'off') {
             config.ANTI_LINK = 'false';
-            return reply("❌ *Anti-link Protection band kar di gayi hai.*");
+            return reply("*❌ Anti-link protection disabled*");
         } else {
-            return reply("Invalid option! Use 'on' or 'off'.");
+            return reply("*❌ Invalid option*\nUse:.antilink on or.antilink off");
         }
     } catch (e) {
-        console.error(e);
+        console.error("ANTILINK CMD ERROR:", e);
+        reply("*❌ Error occurred*");
     }
 });
 
@@ -100,8 +107,8 @@ cmd({
     reply
 }) => {
     try {
-        // Check if anti-link is enabled (Check string 'true' or boolean true)
-        if (config.ANTI_LINK === 'false' || !config.ANTI_LINK || config.ANTI_LINK === false) {
+        // Check if anti-link is enabled
+        if (config.ANTI_LINK === 'false' ||!config.ANTI_LINK || config.ANTI_LINK === false) {
             return;
         }
 
@@ -110,7 +117,7 @@ cmd({
         // Clean body to catch sneaky links
         let cleanBody = body.replace(/[\s\u200b-\u200d\uFEFF]/g, '').toLowerCase();
         const urlRegex = /(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+\.(?:com|org|net|co|pk|biz|id|info|xyz|online|site|website|tech|shop|store|blog|app|dev|io|ai|gov|edu|mil|me)(?:\/[^\s]*)?|whatsapp\.com\/channel\/|wa\.me\//gi;
-        
+
         if (urlRegex.test(cleanBody)) {
             // Admins are exempt
             const senderIsAdmin = await isUserAdmin(conn, from, sender);
@@ -132,7 +139,7 @@ cmd({
 
                 // 2. Notification
                 await conn.sendMessage(from, {
-                    'text': `🚫 *ANTI-LINK PROTECTION*\n\n@${userNumber} ko link bhejne ki wajah se remove kar diya gaya hai.`,
+                    'text': `*🚫 ANTI-LINK PROTECTION*\n\n@${userNumber} was removed for sending links.\n\n*⚡ TEDDY-XMD*`,
                     'mentions': [sender]
                 });
 
@@ -144,4 +151,3 @@ cmd({
         console.error("Anti-link system error:", error);
     }
 });
-    

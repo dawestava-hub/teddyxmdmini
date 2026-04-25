@@ -32,7 +32,7 @@ async(conn, mek, m, { from, reply }) => {
     try {
         await conn.sendMessage(from, { 
             image: { url: config.IMAGE_PATH },
-            caption: `*ASSALAMUALAIKUM 🤗❣️* \n *I AM ACTIVE NOW 🥰* \n*APKO KOI HELP CHAHYE TO MUJHE BATANA OK 😊💞*`
+            caption: `*Hello  🤗❣️* \n *I AM ACTIVE NOW 🥰* \n*Created by Teddy Tech 😊💞*`
         }, { quoted: mek });
     } catch (e) {
         reply("Error: " + e.message);

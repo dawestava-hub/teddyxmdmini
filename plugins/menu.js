@@ -5,15 +5,14 @@ const process = require('process');
 
 cmd({
   pattern: "menu",
-  alias: ["help", "m", "list"],
-  react: "👑",
+  alias: ["help", "m", "list", "commands"],
+  react: "⚡",
   category: "menu",
-  desc: "Show full stylish menu",
+  desc: "Show full bot command list",
   filename: __filename
 }, async (conn, mek, m, { from, reply }) => {
   try {
     const sender = m.sender || 'unknown@s.whatsapp.net';
-
     const prefix = config.PREFIX || ".";
     const mode = config.WORK_TYPE?.toUpperCase() || "PUBLIC";
 
@@ -23,7 +22,7 @@ cmd({
       let h = Math.floor(sec / 3600);
       let mns = Math.floor((sec % 3600) / 60);
       let s = Math.floor(sec % 60);
-      return `${h}H ${mns}M ${s}S`;
+      return `${h}h ${mns}m ${s}s`;
     };
 
     // Ping
@@ -32,88 +31,83 @@ cmd({
     const ping = Date.now() - start;
 
     const customMenu = `
-╔══════════════════════╗
-        👑 *BILAL-MD BOT MENU* 👑
-╚══════════════════════╝
+*╭───〘 ⚡ TEDDY-XMD 〙───*
+*│*
+*│ 👤 User : @${sender.split("@")[0]}*
+*│ ⚙️ Prefix : ${prefix}*
+*│ 🌐 Mode : ${mode}*
+*│ ⏱️ Uptime : ${uptime()}*
+*│ 📡 Speed : ${ping}ms*
+*│*
+*╰────────────────*
 
-👤 *User*   : @${sender.split("@")[0]}
-⚙️ *Prefix* : ${prefix}
-🌐 *Mode*   : ${mode}
-⏳ *Uptime* : ${uptime()}
-📡 *Ping*   : ${ping} ms
+*╭─〔 👑 OWNER MENU 〕*
+*│ • ${prefix}setprefix*
+*│ • ${prefix}mode*
+*│ • ${prefix}autorecording*
+*│ • ${prefix}autotyping*
+*│ • ${prefix}autoread*
+*│ • ${prefix}autostatusview*
+*│ • ${prefix}autobio*
+*│ • ${prefix}anticall*
+*│ • ${prefix}block*
+*│ • ${prefix}unblock*
+*│ • ${prefix}welcome*
+*│ • ${prefix}goodbye*
+*╰────────────────*
 
-──────────────────────
+*╭─〔 👥 GROUP MENU 〕*
+*│ • ${prefix}tagall*
+*│ • ${prefix}online*
+*│ • ${prefix}kick*
+*│ • ${prefix}add*
+*│ • ${prefix}promote*
+*│ • ${prefix}demote*
+*│ • ${prefix}mute*
+*│ • ${prefix}unmute*
+*╰────────────────*
 
-╔═══〔 👑 OWNER / SETTINGS 👑 〕═══╗
-║ ➤ setprefix
-║ ➤ mode
-║ ➤ autorecording
-║ ➤ autotyping
-║ ➤ autovoice
-║ ➤ autoread
-║ ➤ autoviewsview
-║ ➤ autolikestatus
-║ ➤ mentionreply
-║ ➤ welcome
-║ ➤ goodbye
-║ ➤ anticall
-║ ➤ autobio
-║ ➤ block
-║ ➤ unblock
-╚════════════════════════╝
+*╭─〔 ⬇️ DOWNLOAD MENU 〕*
+*│ • ${prefix}video*
+*│ • ${prefix}tiktok*
+*│ • ${prefix}fb*
+*│ • ${prefix}play*
+*│ • ${prefix}ig*
+*╰────────────────*
 
-╔═══〔 👥 GROUP COMMANDS 👥 〕═══╗
-║ ➤ tagall
-║ ➤ online
-║ ➤ kick
-║ ➤ kickall
-║ ➤ add
-║ ➤ promote
-║ ➤ demote
-╚════════════════════════╝
+*╭─〔 🤖 AI MENU 〕*
+*│ • ${prefix}gpt*
+*│ • ${prefix}imagine*
+*│ • ${prefix}gemini*
+*╰────────────────*
 
-╔═══〔 ⬇️ DOWNLOAD MENU ⬇️ 〕═══╗
-║ ➤ video
-║ ➤ tiktok
-║ ➤ fb
-║ ➤ play
-║ ➤ song
-╚════════════════════════╝
+*╭─〔 ✨ TOOLS MENU 〕*
+*│ • ${prefix}ping*
+*│ • ${prefix}tempmail*
+*│ • ${prefix}trt*
+*│ • ${prefix}attp*
+*│ • ${prefix}ss*
+*│ • ${prefix}tts*
+*│ • ${prefix}img*
+*╰────────────────*
 
-╔═══〔 🤖 AI COMMANDS 🤖 〕═══╗
-║ ➤ gpt
-║ ➤ imagine
-╚════════════════════════╝
+*📢 Official Channel*
+https://whatsapp.com/channel/0029Vb6NveDBPzjPa4vIRt3n
 
-╔═══〔 ✨ EXTRA TOOLS ✨ 〕═══╗
-║ ➤ trt
-║ ➤ attp
-║ ➤ ss
-║ ➤ tts
-║ ➤ img
-╚════════════════════════╝
+*💬 Support Group*
+https://chat.whatsapp.com/CLClgqJIC59GrcI4sRzLu8
 
-──────────────────────
-🔗 *Developer*  
-https://bilal.is-great.org
-
-📢 *Support Channel*  
-https://whatsapp.com/channel/0029VbCSzfLEQIaggfb0Fj1j
-
-👥 *Support Group*  
-https://chat.whatsapp.com/EGomptrlDXVD9tV85etFf3?mode=gi_t
-
-👑 *BILAL-MD WhatsApp Bot*
+*⚡ TEDDY-XMD BOT*
 `;
 
     await conn.sendMessage(from, {
-      image: { url: config.IMAGE_PATH || 'https://files.catbox.moe/g6odib.jpg' },
+      image: { url: config.IMAGE_PATH || 'https://files.catbox.moe/13nyhx.jpg' },
       caption: customMenu,
       contextInfo: { mentionedJid: [sender] }
     }, { quoted: m });
 
   } catch (err) {
     console.log("MENU ERROR:", err);
-    reply("❌ Error aa gaya");
+    reply("*❌ Failed to load menu*");
   }
 });

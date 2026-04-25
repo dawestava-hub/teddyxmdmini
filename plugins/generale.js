@@ -3,73 +3,88 @@ const config = require('../config');
 const os = require('os');
 
 // =================================================================
-// 🏓 COMMANDE PING (Style Speedtest)
+// ⚡ PING / UPTIME COMMAND
 // =================================================================
 cmd({
-    pattern: "Uptime",
-    alias: ["speed"],
-    desc: "Vérifier la latence et les ressources",
+    pattern: "uptime",
+    alias: ["speed", "ping", "runtime"],
+    desc: "Check bot latency and system resources",
     category: "general",
-    react: "👑"
+    react: "⚡"
 },
 async(conn, mek, m, { from, reply, myquoted }) => {
     try {
         const start = Date.now();
         
-        // 1. Message d'attente
-        const msg = await conn.sendMessage(from, { text: '*T E S T I N G....*' }, { quoted: myquoted });
+        // 1. Testing message
+        const msg = await conn.sendMessage(from, { text: '*Testing speed...*' }, { quoted: myquoted });
         
         const end = Date.now();
         const latency = end - start;
         
-        // 2. Calcul Mémoire (RAM)
-        const totalMem = (os.totalmem() / 1024 / 1024).toFixed(0);
+        // 2. RAM calculation
+        const totalMem = (os.totalmem() / 1024).toFixed(0);
         const freeMem = (os.freemem() / 1024 / 1024).toFixed(0);
         const usedMem = (totalMem - freeMem).toFixed(0);
 
-        // 3. Message Final Stylé
+        // 3. Bot uptime
+        const uptimeSec = process.uptime();
+        let h = Math.floor(uptimeSec / 3600);
+        let min = Math.floor((uptimeSec % 3600) / 60);
+        let s = Math.floor(uptimeSec % 60);
+        const uptime = `${h}h ${min}m ${s}s`;
+
+        // 4. Final styled message
         const pingMsg = `
-*👑 BILAL-MD UPTIME 👑* ⚡
-
-* UPTIME :❯  ${latency}*
-
-*👑 RAM :❯ ${usedMem}MB / ${totalMem}MB
-
+*╭───〘 ⚡ TEDDY-XMD STATUS 〙───*
+*│*
+*│ 🚀 Speed  : ${latency}ms*
+*│ ⏱️ Uptime : ${uptime}*
+*│ 💾 RAM    : ${usedMem}MB / ${totalMem}MB*
+*│*
+*╰────────────────*
 `;
 
-        // 4. Édition du message (Effet visuel)
+        // 5. Edit message for effect
         await conn.sendMessage(from, { text: pingMsg, edit: msg.key });
 
     } catch (e) {
-        reply("Error: " + e.message);
+        reply("*❌ Error:* " + e.message);
     }
 });
 
-
 // =================================================================
-// 👑 COMMANDE OWNER (Carte de visite)
+// 👑 OWNER COMMAND - Contact Card
 // =================================================================
 cmd({
     pattern: "owner",
-    desc: "Contacter le créateur",
+    alias: ["creator", "dev", "developer"],
+    desc: "Contact the bot owner",
     category: "general",
     react: "👑"
 },
 async(conn, mek, m, { from, myquoted }) => {
-    const ownerNumber = config.OWNER_NUMBER;
+    const ownerNumber = config.OWNER_NUMBER || "254799963583";
     
-    // Création d'une vCard (Fiche contact)
+    // Create vCard contact
     const vcard = 'BEGIN:VCARD\n' +
                   'VERSION:3.0\n' +
-                  'FN:bilal (Owner)\n' +
-                  'ORG:dr Corp;\n' +
+                  'FN:Teddy (Owner)\n' +
+                  'ORG:Teddy-XMD;\n' +
                   `TEL;type=CELL;type=VOICE;waid=${ownerNumber}:${ownerNumber}\n` +
                   'END:VCARD';
 
     await conn.sendMessage(from, {
         contacts: {
-            displayName: 'bilal king',
+            displayName: 'Teddy - TEDDY-XMD Owner',
             contacts: [{ vcard }]
         }
     }, { quoted: myquoted });
+
+    await reply(
+        `*👑 TEDDY-XMD OWNER*\n\n` +
+        `*📱 Contact:* wa.me/${ownerNumber}\n` +
+        `*💬 Message for support, bugs, or features*\n\n` +
+        `*⚡ TEDDY-XMD*`
+    );
 });
