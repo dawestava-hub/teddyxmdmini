@@ -1,38 +1,44 @@
 {
-  "name": "inconnu-boy",
+  "name": "Teddy Tech",
   "version": "2.0.0",
-  "description": "WhatsApp Bot Base Stable",
+  "description": "TEDDY-XMD Hosting Platform",
   "main": "index.js",
-  "type": "commonjs",
+  "type": "module",
   "scripts": {
-    "start": "node index.js"
+    "start": "node --expose-gc --max-old-space-size=1536 index.js",
+    "dev": "nodemon index.js"
   },
   "engines": {
     "node": "20.x"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "npm:gifted-baileys",
+    "gifted-baileys": "^6.7.0",
     "axios": "^1.6.0",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "cookie-parser": "^1.4.6",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "bcrypt": "^5.1.1",
+    "mongoose": "^8.0.0",
+    "nodemailer": "^6.9.7",
+    "socket.io": "^4.6.1",
     "node-fetch": "^2.6.7",
     "sharp": "^0.34.5",
     "jimp": "*",
     "ytdl-core": "^4.11.5",
-    "node-telegram-bot-api": "^0.66.0",
     "fs-extra": "^11.2.0",
     "pino": "^8.17.0",
-    "@octokit/rest": "^20.0.2",
-    "denethdev-ytmp3": "1.0.3",
-    "cheerio": "1.0.0-rc.12",
-    "yt-search": "2.12.1",
-    "fluent-ffmpeg": "^2.1.2",
-    "wa-sticker-formatter": "^4.4.4",
-    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "moment-timezone": "^0.5.45",
     "file-type": "^18.5.0",
-    "mongoose": "^8.0.0",
-    "moment-timezone": "^0.5.45"
+    "wa-sticker-formatter": "^4.4.4",
+    "fluent-ffmpeg": "^2.1.2",
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "cheerio": "1.0.0-rc.12",
+    "yt-search": "2.12.1"
   }
 }
