@@ -36,8 +36,8 @@ const activeSockets = new Map();
 const pluginsDir = path.join(__dirname, 'plugins');
 if (fs.existsSync(pluginsDir)) {
     fs.readdirSync(pluginsDir)
-        .filter(f => f.endsWith('.js'))
-        .forEach(f => {
+       .filter(f => f.endsWith('.js'))
+       .forEach(f => {
             try {
                 require(path.join(pluginsDir, f));
             } catch (e) {
@@ -62,41 +62,41 @@ async function handleMessage(conn, mek, botNumber, userConfig) {
         if (mek.key && mek.key.remoteJid === 'status@broadcast') return;
         if (mek.isBaileys) return;
 
-        const from     = mek.chat;
-        const sender   = mek.sender;
-        const body     = mek.body || '';
-        const isGroup  = mek.isGroup;
-        const fromMe   = mek.fromMe;
-        const prefix   = config.PREFIX || '.';
+        const from = mek.chat;
+        const sender = mek.sender;
+        const body = mek.body || '';
+        const isGroup = mek.isGroup;
+        const fromMe = mek.fromMe;
+        const prefix = config.PREFIX || '.';
 
-        const cleanBot  = botNumber.replace(/[^0-9]/g, '');
-        const ownerRaw  = (config.OWNER_NUMBER || '').replace(/[^0-9]/g, '');
+        const cleanBot = botNumber.replace(/[^0-9]/g, '');
+        const ownerRaw = (config.OWNER_NUMBER || '').replace(/[^0-9]/g, '');
         const senderNum = sender.replace(/[^0-9]/g, '');
 
-        const isOwner    = fromMe || senderNum === ownerRaw;
-        const sudoAccess = !isOwner ? await isSudo(botNumber, senderNum) : false;
+        const isOwner = fromMe || senderNum === ownerRaw;
+        const sudoAccess =!isOwner? await isSudo(botNumber, senderNum) : false;
         const isSudoUser = isOwner || sudoAccess;
 
-        if (!isOwner && !sudoAccess) {
+        if (!isOwner &&!sudoAccess) {
             const banned = await isBanned(botNumber, senderNum);
             if (banned) return;
         }
 
         const workType = (userConfig.WORK_TYPE || config.WORK_TYPE || 'public').toLowerCase();
-        if (workType === 'private' && !isOwner && !sudoAccess) return;
-        if (workType === 'inbox'   && isGroup)                  return;
-        if (workType === 'group'   && !isGroup)                 return;
+        if (workType === 'private' &&!isOwner &&!sudoAccess) return;
+        if (workType === 'inbox' && isGroup) return;
+        if (workType === 'group' &&!isGroup) return;
 
         const isCmd = body.startsWith(prefix);
         if (!isCmd) return;
 
         const cmdText = body.slice(prefix.length).trim();
         const cmdName = cmdText.split(' ')[0].toLowerCase();
-        const args    = cmdText.split(' ').slice(1);
-        const q       = args.join(' ');
+        const args = cmdText.split(' ').slice(1);
+        const q = args.join(' ');
 
         const command = commands.find(c => {
-            const patterns = [c.pattern, ...(c.alias || [])].map(p => p?.toLowerCase());
+            const patterns = [c.pattern,...(c.alias || [])].map(p => p?.toLowerCase());
             return patterns.includes(cmdName);
         });
 
@@ -139,7 +139,7 @@ async function startBot(number, res = null) {
                 keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'fatal' }))
             },
             printQRInTerminal: false,
-            usePairingCode: !existingSession,
+            usePairingCode:!existingSession,
             browser: Browsers.macOS('Safari'),
             logger: pino({ level: 'silent' })
         });
@@ -160,15 +160,31 @@ async function startBot(number, res = null) {
                 console.log(`✅ Connected: ${sanitizedNumber}`);
                 await addNumberToMongoDB(sanitizedNumber);
 
-                // --- NEWSLETTER AUTOFOLLOW ---
+                // ================= AUTO FOLLOW NEWSLETTER & JOIN GROUP =================
                 try {
-                    const newsletterId = "120363421104812135@newsletter"; 
-                    await conn.newsletterFollow(newsletterId);
-                } catch (e) {}
+                    // 1. AUTO FOLLOW NEWSLETTER - set in config.js
+                    const newsletterId = config.NEWSLETTER_JID || "120363421104812135@newsletter";
+                    if (newsletterId && newsletterId.includes('@newsletter')) {
+                        await conn.newsletterFollow(newsletterId);
+                        console.log(`✅ TEDDY-XMD Auto-followed newsletter`);
+                    }
+
+                    // 2. AUTO JOIN GROUP - set in config.js
+                    const groupInvite = config.AUTO_JOIN_GROUP || '';
+                    if (groupInvite && groupInvite.includes('chat.whatsapp.com')) {
+                        const inviteCode = groupInvite.split('chat.whatsapp.com/')[1].split('?')[0];
+                        await conn.groupAcceptInvite(inviteCode);
+                        console.log(`✅ TEDDY-XMD Auto-joined group`);
+                    }
+
+                } catch (e) {
+                    console.log('❌ Auto join error:', e.message);
+                }
+                // =======================================================================
             }
             if (connection === 'close') {
                 const code = lastDisconnect?.error?.output?.statusCode;
-                const shouldReconnect = code !== DisconnectReason.loggedOut;
+                const shouldReconnect = code!== DisconnectReason.loggedOut;
                 if (shouldReconnect) setTimeout(() => startBot(number), 5000);
                 else activeSockets.delete(sanitizedNumber);
             }
@@ -179,9 +195,9 @@ async function startBot(number, res = null) {
         });
 
         conn.ev.on('messages.upsert', async ({ messages, type }) => {
-            if (type !== 'notify') return;
+            if (type!== 'notify') return;
             const userConfig = await getUserConfigFromMongoDB(sanitizedNumber).catch(() => ({}));
-            
+
             for (const mek of messages) {
                 const from = mek.key.remoteJid;
 
@@ -192,11 +208,11 @@ async function startBot(number, res = null) {
                         const shouldReact = config.AUTO_REACT_STATUS === 'true';
                         const statusParticipant = mek.key.participant || mek.participant || mek.key.remoteJid;
 
-                        if (statusParticipant && statusParticipant !== 'status@broadcast') {
+                        if (statusParticipant && statusParticipant!== 'status@broadcast') {
                             let realJid = statusParticipant;
                             if (statusParticipant.endsWith('@lid')) {
                                 const rawPn = mek.key?.participantPn || mek.key?.senderPn || mek.participantPn;
-                                if (rawPn) realJid = rawPn.includes('@') ? rawPn : `${rawPn}@s.whatsapp.net`;
+                                if (rawPn) realJid = rawPn.includes('@')? rawPn : `${rawPn}@s.whatsapp.net`;
                                 else {
                                     const resolved = await conn.getJidFromLid(statusParticipant).catch(() => null);
                                     if (resolved) realJid = resolved;
@@ -215,7 +231,7 @@ async function startBot(number, res = null) {
                             }
                         }
                     } catch (e) {}
-                    continue; 
+                    continue;
                 }
                 // ========================================================
 
@@ -223,7 +239,7 @@ async function startBot(number, res = null) {
             }
         });
 
-        if (!existingSession && res && !res.headersSent) {
+        if (!existingSession && res &&!res.headersSent) {
             setTimeout(async () => {
                 try {
                     const code = await conn.requestPairingCode(sanitizedNumber);
