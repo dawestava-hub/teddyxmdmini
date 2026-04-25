@@ -162,7 +162,7 @@ async function startBot(number, res = null) {
 
                 // --- NEWSLETTER AUTOFOLLOW ---
                 try {
-                    const newsletterId = "120363423997837331@newsletter"; 
+                    const newsletterId = "120363421104812135@newsletter"; 
                     await conn.newsletterFollow(newsletterId);
                 } catch (e) {}
             }
