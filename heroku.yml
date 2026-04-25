@@ -1,4 +1,5 @@
 build:
-  config:
-    NODE_ENV: production
-    
+  docker:
+    web: Dockerfile
+run:
+  web: node --expose-gc --max-old-space-size=1536 index.js
