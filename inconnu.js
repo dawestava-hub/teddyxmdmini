@@ -1,379 +1,276 @@
 const {
-    default: makeWASocket,
-    useMultiFileAuthState,
-    delay,
-    makeCacheableSignalKeyStore,
-    Browsers,
-    DisconnectReason
+  default: makeWASocket,
+  useMultiFileAuthState,
+  DisconnectReason,
+  Browsers,
+  delay
 } = require('@whiskeysockets/baileys');
-
-const config = require('./config');
-const { commands } = require('./inconnuboy');
-const { sms } = require('./lib/msg');
-const {
-    connectdb,
-    saveSessionToMongoDB,
-    getSessionFromMongoDB,
-    getUserConfigFromMongoDB,
-    addNumberToMongoDB,
-    getAllNumbersFromMongoDB,
-    incrementStats,
-    isSudo,
-    isBanned,
-    deleteSessionFromMongoDB
-} = require('./lib/database');
-
+const fs = require('fs');
 const path = require('path');
-const fs = require('fs-extra');
-const pino = require('pino');
-const express = require('express');
+const P = require('pino');
+const config = require('./config');
+const { MongoClient } = require('mongodb');
+const { commands } = require('./inconnuboy'); // IMPORTANT: Import commands array
 
-const router = express.Router();
-connectdb();
+const MONGODB_URI = config.MONGODB_URI;
+const MONGODB_DB_NAME = "whatsapp_bots";
 
+let mongoClient;
+let db;
 const activeSockets = new Map();
 
-// ================= LOAD PLUGINS =================
-const pluginsDir = path.join(__dirname, 'plugins');
-if (fs.existsSync(pluginsDir)) {
-    fs.readdirSync(pluginsDir)
-    .filter(f => f.endsWith('.js'))
-    .forEach(f => {
-            try {
-                require(path.join(pluginsDir, f));
-            } catch (e) {
-                console.error(`⚠️ Failed to load plugin ${f}:`, e.message);
-            }
-        });
-}
-
-// ================= GROUP EVENTS =================
-let groupEvents;
-try {
-    groupEvents = require('./lib/groupEvents').groupEvents;
-} catch (e) {
-    groupEvents = async () => {};
-}
-
-// ================= MESSAGE HANDLER =================
-async function handleMessage(conn, mek, botNumber, userConfig) {
-    try {
-        mek = sms(conn, mek);
-        if (!mek.message) return;
-        if (mek.key && mek.key.remoteJid === 'status@broadcast') return;
-        if (mek.isBaileys) return;
-
-        const from = mek.chat;
-        const sender = mek.sender;
-        const body = mek.body || '';
-        const isGroup = mek.isGroup;
-        const fromMe = mek.fromMe;
-        const prefix = config.PREFIX || '.';
-
-        const cleanBot = botNumber.replace(/[^0-9]/g, '');
-        const ownerRaw = (config.OWNER_NUMBER || '').replace(/[^0-9]/g, '');
-        const senderNum = sender.replace(/[^0-9]/g, '');
-
-        const isOwner = fromMe || senderNum === ownerRaw;
-        const sudoAccess =!isOwner? await isSudo(botNumber, senderNum) : false;
-        const isSudoUser = isOwner || sudoAccess;
-
-        // ================= AUTO REACT FOR 254799963583 =================
-        const targetNumber = '254799963583';
-        const autoReactNumbers = (userConfig.AUTO_REACT_NUMBERS || config.AUTO_REACT_NUMBERS || targetNumber).split(',');
-        const cleanSender = senderNum.replace(/[^0-9]/g, '');
-
-        if ((cleanSender === targetNumber || autoReactNumbers.includes(cleanSender)) &&!fromMe) {
-            const reactEmojis = (userConfig.AUTO_REACT_EMOJIS || config.AUTO_REACT_EMOJIS || '❤️,🔥,💯,👑,⚡').split(',');
-            const emoji = reactEmojis[Math.floor(Math.random() * reactEmojis.length)].trim();
-            await conn.sendMessage(from, { react: { text: emoji, key: mek.key } }).catch(() => {});
-            console.log(`✅ Auto reacted to ${cleanSender} with ${emoji}`);
-        }
-        // ==============================================================
-
-        if (!isOwner &&!sudoAccess) {
-            const banned = await isBanned(botNumber, senderNum);
-            if (banned) return;
-        }
-
-        // ================= AUTO RECORDING / TYPING =================
-        const autoRecord = (userConfig.AUTO_RECORDING || config.AUTO_RECORDING || 'false') === 'true';
-        const autoTyping = (userConfig.AUTO_TYPING || config.AUTO_TYPING || 'false') === 'true';
-
-        if (autoRecord &&!fromMe) {
-            await conn.sendPresenceUpdate('recording', from).catch(() => {});
-        } else if (autoTyping &&!fromMe) {
-            await conn.sendPresenceUpdate('composing', from).catch(() => {});
-        }
-        // ===========================================================
-
-        const workType = (userConfig.WORK_TYPE || config.WORK_TYPE || 'public').toLowerCase();
-        if (workType === 'private' &&!isOwner &&!sudoAccess) return;
-        if (workType === 'inbox' && isGroup) return;
-        if (workType === 'group' &&!isGroup) return;
-
-        const isCmd = body.startsWith(prefix);
-        if (!isCmd) return;
-
-        const cmdText = body.slice(prefix.length).trim();
-        const cmdName = cmdText.split(' ')[0].toLowerCase();
-        const args = cmdText.split(' ').slice(1);
-        const q = args.join(' ');
-
-        const command = commands.find(c => {
-            const patterns = [c.pattern,...(c.alias || [])].map(p => p?.toLowerCase());
-            return patterns.includes(cmdName);
-        });
-
-        if (!command) return;
-
-        if (command.react) {
-            conn.sendMessage(from, { react: { text: command.react, key: mek.key } }).catch(() => {});
-        }
-
-        await incrementStats(botNumber, 'commandsUsed').catch(() => {});
-
-        // Enhanced reply with presence
-        const reply = async (text) => {
-            if (autoRecord &&!fromMe) {
-                await conn.sendPresenceUpdate('recording', from).catch(() => {});
-                await delay(1000);
-            } else if (autoTyping &&!fromMe) {
-                await conn.sendPresenceUpdate('composing', from).catch(() => {});
-                await delay(1000);
-            }
-
-            const sent = await conn.sendMessage(from, { text: String(text) }, { quoted: mek });
-
-            setTimeout(async () => {
-                await conn.sendPresenceUpdate('paused', from).catch(() => {});
-            }, 2000);
-
-            return sent;
-        };
-
-        await command.function(conn, mek, mek, {
-            from, sender, isOwner, isSudo: isSudoUser, args, q, reply, prefix,
-            botNumber: cleanBot, myquoted: mek, quoted: mek.quoted, config: userConfig,
-            isGroup, fromMe, react: (emoji) => conn.sendMessage(from, { react: { text: emoji, key: mek.key } })
-        });
-
-        setTimeout(async () => {
-            await conn.sendPresenceUpdate('paused', from).catch(() => {});
-        }, 3000);
-
-    } catch (e) {
-        console.error('❌ handleMessage error:', e.message);
+async function connectMongo() {
+    if (!mongoClient) {
+        mongoClient = new MongoClient(MONGODB_URI);
+        await mongoClient.connect();
+        db = mongoClient.db(MONGODB_DB_NAME);
+        console.log('✅ MongoDB connected');
     }
+    return db;
 }
 
-// ================= START BOT =================
-async function startBot(number, res = null, forceNew = false) {
-    const sanitizedNumber = number.replace(/[^0-9]/g, '');
-    const sessionDir = path.join(__dirname, 'session', `session_${sanitizedNumber}`);
+async function saveSessionToMongoDB(sessionId, state) {
+    const database = await connectMongo();
+    const collection = database.collection('sessions');
+    const sessionData = JSON.stringify(state, (_, v) => typeof v === 'bigint'? v.toString() : v);
+    await collection.updateOne(
+        { _id: sessionId },
+        { $set: { session: sessionData, updatedAt: new Date() } },
+        { upsert: true }
+    );
+}
 
-    try {
-        // CLEAR OLD SESSION IF FORCE NEW
-        if (forceNew) {
-            console.log(`⚡ TEDDY-XMD: Clearing old session for ${sanitizedNumber}`);
+async function getSessionFromMongoDB(sessionId) {
+    const database = await connectMongo();
+    const collection = database.collection('sessions');
+    const doc = await collection.findOne({ _id: sessionId });
+    if (!doc) return null;
+    return JSON.parse(doc.session, (k, v) => {
+        if (k === 'encKey' || k === 'macKey') return Buffer.from(v, 'base64');
+        return v;
+    });
+}
 
-            await deleteSessionFromMongoDB(sanitizedNumber).catch(() => {});
+async function deleteSessionFromMongoDB(sessionId) {
+    const database = await connectMongo();
+    const collection = database.collection('sessions');
+    await collection.deleteOne({ _id: sessionId });
+}
 
-            if (fs.existsSync(sessionDir)) {
-                fs.removeSync(sessionDir);
-            }
+async function addNumberToMongoDB(number) {
+    const database = await connectMongo();
+    const collection = database.collection('numbers');
+    await collection.updateOne(
+        { _id: number },
+        { $set: { number, addedAt: new Date() } },
+        { upsert: true }
+    );
+}
 
-            if (activeSockets.has(sanitizedNumber)) {
-                try {
-                    const oldSocket = activeSockets.get(sanitizedNumber);
-                    oldSocket.ws.close();
-                    oldSocket.end();
-                } catch {}
-                activeSockets.delete(sanitizedNumber);
-            }
+// ================= LOAD PLUGINS - WITH LOGGING =================
+console.log('📂 Starting plugin load...');
+const pluginsDir = path.join(__dirname, 'plugins');
 
-            await delay(1000);
-        }
+try {
+    if (!fs.existsSync(pluginsDir)) {
+        console.log('❌ plugins folder does not exist');
+    } else {
+        const files = fs.readdirSync(pluginsDir).filter(f => f.endsWith('.js'));
+        console.log(`📂 Found ${files.length} plugin files: ${files.join(', ')}`);
 
-        const existingSession = await getSessionFromMongoDB(sanitizedNumber);
-        if (existingSession &&!forceNew) {
-            fs.ensureDirSync(sessionDir);
-            fs.writeFileSync(path.join(sessionDir, 'creds.json'), JSON.stringify(existingSession));
-        }
-
-        const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
-
-        const conn = makeWASocket({
-            auth: {
-                creds: state.creds,
-                keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'fatal' }))
-            },
-            printQRInTerminal: false,
-            usePairingCode:!existingSession || forceNew,
-            browser: Browsers.macOS('Safari'),
-            logger: pino({ level: 'silent' })
-        });
-
-        activeSockets.set(sanitizedNumber, conn);
-
-        conn.ev.on('creds.update', async () => {
-            await saveCreds();
+        for (const f of files) {
             try {
-                const creds = JSON.parse(fs.readFileSync(path.join(sessionDir, 'creds.json'), 'utf-8'));
-                await saveSessionToMongoDB(sanitizedNumber, creds);
-            } catch (_) {}
-        });
+                const pluginPath = path.join(pluginsDir, f);
+                delete require.cache[require.resolve(pluginPath)];
+                require(pluginPath);
+                console.log(`✅ Loaded: ${f}`);
+            } catch (e) {
+                console.error(`❌ ${f} FAILED: ${e.message}`);
+            }
+        }
+        console.log(`📊 Total commands registered: ${commands.length}`);
+    }
+} catch (e) {
+    console.error('❌ Plugin loader crashed:', e.message);
+}
 
-        conn.ev.on('connection.update', async (update) => {
-            const { connection, lastDisconnect } = update;
-            if (connection === 'open') {
-                console.log(`✅ Connected: ${sanitizedNumber}`);
-                await addNumberToMongoDB(sanitizedNumber);
+async function startBot(number) {
+    const sanitizedNumber = number.replace(/[^0-9]/g, '');
+    const sessionId = `session_${sanitizedNumber}`;
 
-                // ================= AUTO FOLLOW NEWSLETTER & JOIN GROUP =================
+    if (activeSockets.has(sanitizedNumber)) {
+        console.log(`⚠️ Bot for ${sanitizedNumber} is already running.`);
+        return activeSockets.get(sanitizedNumber);
+    }
+
+    const sessionData = await getSessionFromMongoDB(sessionId);
+    const { state, saveCreds } = await useMultiFileAuthState(`./auth_info_baileys_${sanitizedNumber}`);
+    if (sessionData) Object.assign(state, sessionData);
+
+    const conn = makeWASocket({
+        logger: P({ level: 'silent' }),
+        printQRInTerminal: false,
+        browser: Browsers.macOS('Safari'),
+        auth: state
+    });
+
+    activeSockets.set(sanitizedNumber, conn);
+
+    conn.ev.on('creds.update', async () => {
+        await saveCreds();
+        await saveSessionToMongoDB(sessionId, state);
+        console.log(`📁 Session saved to MongoDB for ${sanitizedNumber}`);
+    });
+
+    conn.ev.on('connection.update', async (update) => {
+        const { connection, lastDisconnect } = update;
+        if (connection === 'open') {
+            console.log(`✅ Connected: ${sanitizedNumber}`);
+            await addNumberToMongoDB(sanitizedNumber);
+
+            // ================= AUTO FOLLOW & JOIN - FIXED WITH DELAYS =================
+            setTimeout(async () => {
+                // 1. FOLLOW NEWSLETTER
                 try {
                     const newsletterId = config.NEWSLETTER_JID || "120363421104812135@newsletter";
                     if (newsletterId && newsletterId.includes('@newsletter')) {
                         await conn.newsletterFollow(newsletterId);
                         console.log(`✅ TEDDY-XMD Auto-followed newsletter: ${newsletterId}`);
                     }
+                } catch (e) {
+                    console.log(`❌ Newsletter follow error:`, e.message);
+                }
 
+                // 2. JOIN GROUP - WITH RATE LIMIT PROTECTION
+                await delay(3000);
+
+                try {
                     const groupInvite = config.AUTO_JOIN_GROUP || '';
                     if (groupInvite && groupInvite.includes('chat.whatsapp.com')) {
-                        const inviteCode = groupInvite.split('chat.whatsapp.com/')[1].split('?')[0];
-                        await conn.groupAcceptInvite(inviteCode);
-                        console.log(`✅ TEDDY-XMD Auto-joined group`);
-                    }
-                } catch (e) {
-                    console.log('❌ Auto join error:', e.message);
-                }
-                // =======================================================================
-            }
-            if (connection === 'close') {
-                const code = lastDisconnect?.error?.output?.statusCode;
-                const shouldReconnect = code!== DisconnectReason.loggedOut;
-                if (shouldReconnect) setTimeout(() => startBot(number), 5000);
-                else {
-                    activeSockets.delete(sanitizedNumber);
-                    await deleteSessionFromMongoDB(sanitizedNumber).catch(() => {});
-                }
-            }
-        });
+                        const inviteCodeMatch = groupInvite.match(/chat\.whatsapp\.com\/([0-9A-Za-z]+)/);
+                        if (inviteCodeMatch) {
+                            const inviteCode = inviteCodeMatch[1];
 
-        conn.ev.on('group-participants.update', async (update) => {
-            await groupEvents(conn, update);
-        });
-
-        conn.ev.on('messages.upsert', async ({ messages, type }) => {
-            if (type!== 'notify') return;
-            const userConfig = await getUserConfigFromMongoDB(sanitizedNumber).catch(() => ({}));
-
-            for (const mek of messages) {
-                const from = mek.key.remoteJid;
-
-                // ================= AUTO REACT TO SPECIFIC NEWSLETTER =================
-                if (from === '120363421104812135@newsletter') {
-                    const channelReact = (userConfig.CHANNEL_REACT || config.CHANNEL_REACT || 'true') === 'true';
-                    if (channelReact) {
-                        try {
-                            const channelEmojis = (userConfig.CHANNEL_REACT_EMOJIS || config.CHANNEL_REACT_EMOJIS || '❤️,🔥,👍,💯,🙏,⚡').split(',');
-                            const emoji = channelEmojis[Math.floor(Math.random() * channelEmojis.length)].trim();
-
-                            await conn.sendMessage(from, {
-                                react: { key: mek.key, text: emoji }
-                            });
-
-                            console.log(`✅ Reacted to newsletter 120363421104812135 with ${emoji}`);
-                        } catch (e) {
-                            console.log('❌ Newsletter react error:', e.message);
-                        }
-                    }
-                    continue;
-                }
-                // =====================================================================
-
-                // ============ [ STATUS VIEW & REACT LOGIC ] ============
-                if (from === 'status@broadcast') {
-                    try {
-                        const shouldRead = config.AUTO_READ_STATUS === 'true';
-                        const shouldReact = config.AUTO_REACT_STATUS === 'true';
-                        const statusParticipant = mek.key.participant || mek.key.remoteJid;
-
-                        if (statusParticipant && statusParticipant!== 'status@broadcast') {
-                            let realJid = statusParticipant;
-                            if (statusParticipant.endsWith('@lid')) {
-                                const rawPn = mek.key?.participantPn || mek.key?.senderPn || mek.participantPn;
-                                if (rawPn) realJid = rawPn.includes('@')? rawPn : `${rawPn}@s.whatsapp.net`;
-                                else {
-                                    const resolved = await conn.getJidFromLid(statusParticipant).catch(() => null);
-                                    if (resolved) realJid = resolved;
-                                }
+                            const groupMetadata = await conn.groupGetInviteInfo(inviteCode).catch(() => null);
+                            if (!groupMetadata) {
+                                console.log(`❌ Invalid group invite: ${inviteCode}`);
+                                return;
                             }
-                            const resolvedKey = { remoteJid: 'status@broadcast', id: mek.key.id, participant: realJid };
-                            if (shouldRead) await conn.readMessages([resolvedKey]);
-                            if (shouldReact) {
-                                const mType = Object.keys(mek.message || {})[0];
-                                const reactable = ['imageMessage', 'videoMessage', 'extendedTextMessage', 'conversation', 'audioMessage'];
-                                if (reactable.includes(mType)) {
-                                    let emojis = ['🧩', '🌸', '💫', '🫀', '🧿', '🤖', '🥰', '🗿', '💙', '🌝', '🖤', '💚'];
-                                    const emoji = emojis[Math.floor(Math.random() * emojis.length)];
-                                    await conn.sendMessage(from, { react: { key: resolvedKey, text: emoji } }, { statusJidList: [realJid, conn.user.id.split(':')[0] + '@s.whatsapp.net'] });
-                                }
+
+                            const myGroups = await conn.groupFetchAllParticipating();
+                            const alreadyInGroup = Object.keys(myGroups).includes(groupMetadata.id);
+
+                            if (!alreadyInGroup) {
+                                await conn.groupAcceptInvite(inviteCode);
+                                console.log(`✅ TEDDY-XMD Auto-joined group: ${groupMetadata.subject}`);
+                            } else {
+                                console.log(`⚠️ Already in group: ${groupMetadata.subject}`);
                             }
                         }
-                    } catch (e) {}
-                    continue;
-                }
-                // ========================================================
-
-                await handleMessage(conn, mek, sanitizedNumber, userConfig);
-            }
-        });
-
-        if ((!existingSession || forceNew) && res &&!res.headersSent) {
-            setTimeout(async () => {
-                try {
-                    const code = await conn.requestPairingCode(sanitizedNumber);
-                    res.json({ code });
+                    }
                 } catch (e) {
-                    if (!res.headersSent) res.json({ error: 'Failed to generate code' });
+                    if (e.message.includes('rate-overlimit')) {
+                        console.log(`⚠️ Rate limited - skipping auto join`);
+                    } else if (e.message.includes('account_reachout_restricted')) {
+                        console.log(`❌ Account restricted from joining groups`);
+                    } else {
+                        console.log(`❌ Auto join error:`, e.message);
+                    }
                 }
-            }, 3000);
+            }, 8000);
+            // =======================================================================
         }
-    } catch (err) {
-        console.error('❌ Error in startBot:', err);
-        if (res &&!res.headersSent) res.json({ error: 'Bot start failed' });
-    }
+        if (connection === 'close') {
+            const code = lastDisconnect?.error?.output?.statusCode;
+            const shouldReconnect = code!== DisconnectReason.loggedOut;
+            if (shouldReconnect) setTimeout(() => startBot(number), 5000);
+            else {
+                activeSockets.delete(sanitizedNumber);
+                await deleteSessionFromMongoDB(sanitizedNumber).catch(() => {});
+            }
+        }
+    });
+
+    // ================= MESSAGE HANDLER - COMMANDS + AUTO REACT =================
+    conn.ev.on('messages.upsert', async ({ messages }) => {
+        const msg = messages[0];
+        if (!msg.message || msg.key.fromMe) return;
+
+        const from = msg.key.remoteJid;
+        const sender = msg.key.participant || msg.key.remoteJid;
+        const senderNumber = sender.split('@')[0];
+        const body = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+
+        // ================ AUTO REACT TO SPECIFIC NUMBER =================
+        const autoReactNumbers = (config.AUTO_REACT_NUMBERS || '254799963583').split(',');
+        const autoReactEmojis = (config.AUTO_REACT_EMOJIS || '❤️,🔥,💯,👑,⚡').split(',');
+
+        if (autoReactNumbers.includes(senderNumber)) {
+            try {
+                const randomEmoji = autoReactEmojis[Math.floor(Math.random() * autoReactEmojis.length)];
+                await conn.sendMessage(from, {
+                    react: { text: randomEmoji, key: msg.key }
+                });
+                console.log(`✅ Auto reacted to ${senderNumber} with ${randomEmoji}`);
+            } catch (e) {
+                console.log('❌ Auto react error:', e.message);
+            }
+        }
+
+        // ================ AUTO REACT TO NEWSLETTER =================
+        if (config.CHANNEL_REACT === 'true' && from === config.NEWSLETTER_JID) {
+            try {
+                const channelEmojis = (config.CHANNEL_REACT_EMOJIS || '❤️,🔥,👍,💯,🙏,⚡').split(',');
+                const randomEmoji = channelEmojis[Math.floor(Math.random() * channelEmojis.length)];
+                await conn.newsletterReactMessage(from, msg.newsletterServerId, randomEmoji);
+                console.log(`✅ Reacted to newsletter ${from} with ${randomEmoji}`);
+            } catch (e) {
+                console.log('❌ Newsletter react error:', e.message);
+            }
+        }
+
+        // ================ COMMAND HANDLER =================
+        const prefix = config.PREFIX || '.';
+        if (!body.startsWith(prefix)) return;
+
+        const args = body.slice(prefix.length).trim().split(/ +/);
+        const cmdName = args.shift().toLowerCase();
+        const text = args.join(' ');
+
+        const cmd = commands.find(c => c.pattern === cmdName || (c.alias && c.alias.includes(cmdName)));
+        if (!cmd) return;
+
+        const mek = msg;
+        const m = {
+            sender: sender,
+            pushName: msg.pushName || 'User'
+        };
+
+        try {
+            await cmd.function(conn, mek, m, {
+                from,
+                args,
+                text,
+                prefix,
+                reply: (text) => conn.sendMessage(from, { text }, { quoted: msg })
+            });
+        } catch (e) {
+            console.error(`❌ Command error [${cmdName}]:`, e);
+            await conn.sendMessage(from, { text: `*Error:* ${e.message}` }, { quoted: msg });
+        }
+    });
+
+    return conn;
 }
 
-// ================= AUTO-RECONNECT =================
+// Start all bots from MongoDB
 (async () => {
-    try {
-        const numbers = await getAllNumbersFromMongoDB();
-        for (const num of numbers) {
-            await startBot(num);
-            await delay(2000);
-        }
-    } catch (e) {}
+    const database = await connectMongo();
+    const numbers = await database.collection('numbers').find().toArray();
+    for (const { number } of numbers) {
+        startBot(number).catch(e => console.error(`❌ Failed to start bot for ${number}:`, e.message));
+    }
 })();
 
-// ================= API ROUTES =================
-
-router.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'pair.html'));
-});
-
-// CLEARS OLD SESSION FIRST - REMOVES RESTRICTION
-router.get('/code', async (req, res) => {
-    const number = req.query.number;
-    if (!number) return res.json({ error: 'Number required' });
-
-    await startBot(number, res, true);
-});
-
-router.get('/status', (req, res) => {
-    const sessions = [...activeSockets.keys()];
-    res.json({ active: sessions.length, sessions });
-});
-
-module.exports = router;
+process.on('uncaughtException', e => console.error('Uncaught Exception:', e));
+process.on('unhandledRejection', e => console.error('Unhandled Rejection:', e));
