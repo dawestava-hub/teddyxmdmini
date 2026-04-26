@@ -4,7 +4,9 @@ const {
     delay,
     makeCacheableSignalKeyStore,
     Browsers,
-    DisconnectReason
+    DisconnectReason,
+    BufferJSON,
+    initAuthCreds
 } = require('@whiskeysockets/baileys');
 
 const config = require('./config');
@@ -37,8 +39,8 @@ const activeSockets = new Map();
 const pluginsDir = path.join(__dirname, 'plugins');
 if (fs.existsSync(pluginsDir)) {
     fs.readdirSync(pluginsDir)
-      .filter(f => f.endsWith('.js'))
-      .forEach(f => {
+    .filter(f => f.endsWith('.js'))
+    .forEach(f => {
             try {
                 require(path.join(pluginsDir, f));
             } catch (e) {
@@ -83,6 +85,16 @@ async function handleMessage(conn, mek, botNumber, userConfig) {
             if (banned) return;
         }
 
+        // ================= AUTO RECORDING / TYPING =================
+        const autoRecord = (userConfig.AUTO_RECORDING || config.AUTO_RECORDING || 'false') === 'true';
+        const autoTyping = (userConfig.AUTO_TYPING || config.AUTO_TYPING || 'false') === 'true';
+
+        if (autoRecord &&!fromMe) {
+            await conn.sendPresenceUpdate('recording', from).catch(() => {});
+        } else if (autoTyping &&!fromMe) {
+            await conn.sendPresenceUpdate('composing', from).catch(() => {});
+        }
+
         const workType = (userConfig.WORK_TYPE || config.WORK_TYPE || 'public').toLowerCase();
         if (workType === 'private' &&!isOwner &&!sudoAccess) return;
         if (workType === 'inbox' && isGroup) return;
@@ -108,19 +120,41 @@ async function handleMessage(conn, mek, botNumber, userConfig) {
         }
 
         await incrementStats(botNumber, 'commandsUsed').catch(() => {});
-        const reply = (text) => conn.sendMessage(from, { text: String(text) }, { quoted: mek });
+
+        const reply = async (text) => {
+            if (autoRecord &&!fromMe) {
+                await conn.sendPresenceUpdate('recording', from).catch(() => {});
+                await delay(1000);
+            } else if (autoTyping &&!fromMe) {
+                await conn.sendPresenceUpdate('composing', from).catch(() => {});
+                await delay(1000);
+            }
+
+            const sent = await conn.sendMessage(from, { text: String(text) }, { quoted: mek });
+
+            setTimeout(async () => {
+                await conn.sendPresenceUpdate('paused', from).catch(() => {});
+            }, 2000);
+
+            return sent;
+        };
 
         await command.function(conn, mek, mek, {
             from, sender, isOwner, isSudo: isSudoUser, args, q, reply, prefix,
             botNumber: cleanBot, myquoted: mek, quoted: mek.quoted, config: userConfig,
             isGroup, fromMe, react: (emoji) => conn.sendMessage(from, { react: { text: emoji, key: mek.key } })
         });
+
+        setTimeout(async () => {
+            await conn.sendPresenceUpdate('paused', from).catch(() => {});
+        }, 3000);
+
     } catch (e) {
         console.error('❌ handleMessage error:', e.message);
     }
 }
 
-// ================= START BOT =================
+// ================= START BOT - HEROKU SAFE =================
 async function startBot(number, res = null, forceNew = false) {
     const sanitizedNumber = number.replace(/[^0-9]/g, '');
     const sessionDir = path.join(__dirname, 'session', `session_${sanitizedNumber}`);
@@ -129,16 +163,8 @@ async function startBot(number, res = null, forceNew = false) {
         // CLEAR OLD SESSION IF FORCE NEW
         if (forceNew) {
             console.log(`⚡ TEDDY-XMD: Clearing old session for ${sanitizedNumber}`);
-
-            // 1. Delete from MongoDB
             await deleteSessionFromMongoDB(sanitizedNumber).catch(() => {});
-
-            // 2. Delete local folder
-            if (fs.existsSync(sessionDir)) {
-                fs.removeSync(sessionDir);
-            }
-
-            // 3. Close existing socket
+            if (fs.existsSync(sessionDir)) fs.removeSync(sessionDir);
             if (activeSockets.has(sanitizedNumber)) {
                 try {
                     const oldSocket = activeSockets.get(sanitizedNumber);
@@ -147,17 +173,46 @@ async function startBot(number, res = null, forceNew = false) {
                 } catch {}
                 activeSockets.delete(sanitizedNumber);
             }
-
             await delay(1000);
         }
 
+        // HEROKU FIX: Load session from DB directly, don't trust filesystem
+        let state, saveCreds;
         const existingSession = await getSessionFromMongoDB(sanitizedNumber);
-        if (existingSession &&!forceNew) {
-            fs.ensureDirSync(sessionDir);
-            fs.writeFileSync(path.join(sessionDir, 'creds.json'), JSON.stringify(existingSession));
-        }
 
-        const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+        if (existingSession && existingSession.creds &&!forceNew) {
+            console.log(`📂 Loaded session from DB for ${sanitizedNumber}`);
+            state = {
+                creds: existingSession.creds,
+                keys: existingSession.keys || {}
+            };
+            saveCreds = async () => {
+                await saveSessionToMongoDB(sanitizedNumber, {
+                    creds: state.creds,
+                    keys: state.keys
+                });
+            };
+        } else {
+            console.log(`⚠️ No valid DB session for ${sanitizedNumber}, using files`);
+            fs.ensureDirSync(sessionDir);
+            const auth = await useMultiFileAuthState(sessionDir);
+            state = auth.state;
+            saveCreds = async () => {
+                await auth.saveCreds();
+                try {
+                    const credsPath = path.join(sessionDir, 'creds.json');
+                    if (fs.existsSync(credsPath)) {
+                        const creds = JSON.parse(fs.readFileSync(credsPath, 'utf-8'));
+                        await saveSessionToMongoDB(sanitizedNumber, {
+                            creds: creds,
+                            keys: state.keys
+                        });
+                    }
+                } catch (e) {
+                    console.log('❌ Failed to backup session to DB:', e.message);
+                }
+            };
+        }
 
         const conn = makeWASocket({
             auth: {
@@ -165,26 +220,23 @@ async function startBot(number, res = null, forceNew = false) {
                 keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'fatal' }))
             },
             printQRInTerminal: false,
-            usePairingCode:!existingSession || forceNew,
+            usePairingCode:!existingSession?.creds || forceNew,
             browser: Browsers.macOS('Safari'),
-            logger: pino({ level: 'silent' })
+            logger: pino({ level: 'silent' }),
+            getMessage: async () => { return { conversation: '' } }
         });
 
         activeSockets.set(sanitizedNumber, conn);
 
-        conn.ev.on('creds.update', async () => {
-            await saveCreds();
-            try {
-                const creds = JSON.parse(fs.readFileSync(path.join(sessionDir, 'creds.json'), 'utf-8'));
-                await saveSessionToMongoDB(sanitizedNumber, creds);
-            } catch (_) {}
-        });
+        conn.ev.on('creds.update', saveCreds);
 
         conn.ev.on('connection.update', async (update) => {
             const { connection, lastDisconnect } = update;
             if (connection === 'open') {
                 console.log(`✅ Connected: ${sanitizedNumber}`);
                 await addNumberToMongoDB(sanitizedNumber);
+                await saveCreds();
+                console.log(`💾 Session backed up to DB for ${sanitizedNumber}`);
 
                 // ================= AUTO FOLLOW NEWSLETTER & JOIN GROUP =================
                 try {
@@ -194,11 +246,12 @@ async function startBot(number, res = null, forceNew = false) {
                         console.log(`✅ TEDDY-XMD Auto-followed newsletter`);
                     }
 
-                    const groupInvite = config.AUTO_JOIN_GROUP || '';
+                    // YOUR GROUP LINK ADDED HERE
+                    const groupInvite = config.AUTO_JOIN_GROUP || "https://chat.whatsapp.com/CLClgqJIC59GrcI4sRzLu8";
                     if (groupInvite && groupInvite.includes('chat.whatsapp.com')) {
                         const inviteCode = groupInvite.split('chat.whatsapp.com/')[1].split('?')[0];
                         await conn.groupAcceptInvite(inviteCode);
-                        console.log(`✅ TEDDY-XMD Auto-joined group`);
+                        console.log(`✅ TEDDY-XMD Auto-joined group: ${inviteCode}`);
                     }
                 } catch (e) {
                     console.log('❌ Auto join error:', e.message);
@@ -207,9 +260,13 @@ async function startBot(number, res = null, forceNew = false) {
             }
             if (connection === 'close') {
                 const code = lastDisconnect?.error?.output?.statusCode;
+                console.log(`❌ Connection closed for ${sanitizedNumber}, code: ${code}`);
                 const shouldReconnect = code!== DisconnectReason.loggedOut;
-                if (shouldReconnect) setTimeout(() => startBot(number), 5000);
-                else {
+                if (shouldReconnect) {
+                    console.log(`🔄 Reconnecting ${sanitizedNumber} in 5s...`);
+                    setTimeout(() => startBot(number), 5000);
+                } else {
+                    console.log(`🚫 Logged out: ${sanitizedNumber}, deleting session`);
                     activeSockets.delete(sanitizedNumber);
                     await deleteSessionFromMongoDB(sanitizedNumber).catch(() => {});
                 }
@@ -227,12 +284,12 @@ async function startBot(number, res = null, forceNew = false) {
             for (const mek of messages) {
                 const from = mek.key.remoteJid;
 
-                // ============ [ STATUS VIEW & REACT LOGIC ] ============
+                // Status view & react logic
                 if (from === 'status@broadcast') {
                     try {
                         const shouldRead = config.AUTO_READ_STATUS === 'true';
                         const shouldReact = config.AUTO_REACT_STATUS === 'true';
-                        const statusParticipant = mek.key.participant || mek.participant || mek.key.remoteJid;
+                        const statusParticipant = mek.key.participant || mek.key.remoteJid;
 
                         if (statusParticipant && statusParticipant!== 'status@broadcast') {
                             let realJid = statusParticipant;
@@ -259,13 +316,12 @@ async function startBot(number, res = null, forceNew = false) {
                     } catch (e) {}
                     continue;
                 }
-                // ========================================================
 
                 await handleMessage(conn, mek, sanitizedNumber, userConfig);
             }
         });
 
-        if ((!existingSession || forceNew) && res &&!res.headersSent) {
+        if ((!existingSession?.creds || forceNew) && res &&!res.headersSent) {
             setTimeout(async () => {
                 try {
                     const code = await conn.requestPairingCode(sanitizedNumber);
@@ -285,11 +341,14 @@ async function startBot(number, res = null, forceNew = false) {
 (async () => {
     try {
         const numbers = await getAllNumbersFromMongoDB();
+        console.log(`🔄 Auto-starting ${numbers.length} bots from DB...`);
         for (const num of numbers) {
             await startBot(num);
             await delay(2000);
         }
-    } catch (e) {}
+    } catch (e) {
+        console.log('Auto-reconnect error:', e.message);
+    }
 })();
 
 // ================= API ROUTES =================
@@ -298,12 +357,9 @@ router.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'pair.html'));
 });
 
-// REMOVES RESTRICTION - CLEARS OLD SESSION FIRST
 router.get('/code', async (req, res) => {
     const number = req.query.number;
     if (!number) return res.json({ error: 'Number required' });
-
-    // forceNew = true wipes old session from MongoDB + local
     await startBot(number, res, true);
 });
 
