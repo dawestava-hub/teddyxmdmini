@@ -34,8 +34,8 @@ const PORT = process.env.PORT || 3000;
 
 connectdb();
 
-// Start Telegram bot
-require('./telegram')();
+// Start Telegram bot - FIXED: removed ()
+require('./telegram');
 
 const activeSockets = new Map();
 
@@ -43,8 +43,8 @@ const activeSockets = new Map();
 const pluginsDir = path.join(__dirname, 'plugins');
 if (fs.existsSync(pluginsDir)) {
     fs.readdirSync(pluginsDir)
-  .filter(f => f.endsWith('.js'))
-  .forEach(f => {
+ .filter(f => f.endsWith('.js'))
+ .forEach(f => {
         try {
             require(path.join(pluginsDir, f));
         } catch (e) {

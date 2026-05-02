@@ -6,20 +6,17 @@ const pino = require('pino');
 const config = require('./config');
 
 const BOT_TOKEN = config.TELEGRAM_BOT_TOKEN;
-const BOT_IMAGE = config.IMAGE_PATH;
-const OWNER_ID = config.TELEGRAM_CHAT_ID?.replace(/[^0-9]/g, '') || '';
 
 if (!BOT_TOKEN) {
     console.log('❌ TELEGRAM_BOT_TOKEN missing. Telegram bot disabled.');
-    module.exports = () => {};
+    module.exports = {};
     return;
 }
 
 const bot = new Telegraf(BOT_TOKEN);
+const BOT_IMAGE = config.IMAGE_PATH;
 const tempSessions = new Map();
 const rateLimit = new Map();
-
-// Track total pairs
 let totalPairs = 0;
 
 bot.start(async (ctx) => {
@@ -51,12 +48,12 @@ bot.start(async (ctx) => {
         await ctx.replyWithPhoto(BOT_IMAGE, {
             caption: text,
             parse_mode: 'Markdown',
-          ...keyboard
+         ...keyboard
         });
     } catch {
         await ctx.reply(text, {
             parse_mode: 'Markdown',
-          ...keyboard
+         ...keyboard
         });
     }
 });
@@ -224,7 +221,7 @@ async function startTgPairing(ctx, number) {
 
         await ctx.telegram.editMessageText(ctx.chat.id, loading.message_id, null, codeMsg, {
             parse_mode: 'Markdown',
-          ...Markup.inlineKeyboard([
+           ...Markup.inlineKeyboard([
                [Markup.button.callback('📋 Copy Code', `copy_${code}`)],
                [Markup.button.callback('🔄 New Code', 'pair')]
            ])
@@ -241,11 +238,9 @@ bot.action(/copy_(.+)/, async (ctx) => {
     await ctx.reply(`\`${ctx.match[1]}\``, { parse_mode: 'Markdown' });
 });
 
-// Webhook setup for Heroku, polling for local
 if (process.env.NODE_ENV === 'production') {
     const domain = process.env.HEROKU_APP_NAME + '.herokuapp.com';
     const secretPath = `/telegraf/${bot.secretPathComponent()}`;
-
     bot.telegram.setWebhook(`https://${domain}${secretPath}`).then(() => {
         console.log(`✅ ${config.BOT_NAME} Telegram Bot webhook set`);
     }).catch(e => {
@@ -256,7 +251,6 @@ if (process.env.NODE_ENV === 'production') {
     console.log(`✅ ${config.BOT_NAME} Telegram Bot started with polling`);
 }
 
-// Graceful stop
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
 
