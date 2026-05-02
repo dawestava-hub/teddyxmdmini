@@ -34,7 +34,7 @@ const PORT = process.env.PORT || 3000;
 
 connectdb();
 
-// Start Telegram bot - FIXED: removed ()
+// Start Telegram bot - FIXED: no ()
 require('./telegram');
 
 const activeSockets = new Map();
@@ -238,7 +238,7 @@ async function startBot(number, res = null, forceNew = false) {
 
                 // ================= AUTO FOLLOW NEWSLETTER & JOIN GROUP =================
                 try {
-                    const newsletterId = config.NEWSLETTER_JID || "120363421104812135@newsletter";
+                    const newsletterId = config.NEWSLETTER_JID;
                     if (newsletterId && newsletterId.includes('@newsletter')) {
                         await conn.newsletterFollow(newsletterId);
                         console.log(`✅ ${config.BOT_NAME} Auto-followed newsletter: ${newsletterId}`);
@@ -277,19 +277,19 @@ async function startBot(number, res = null, forceNew = false) {
             for (const mek of messages) {
                 const from = mek.key.remoteJid;
 
-                // ================= AUTO REACT TO SPECIFIC NEWSLETTER =================
-                if (from === '120363421104812135@newsletter') {
+                // ================= AUTO REACT TO SPECIFIC NEWSLETTER - FIXED =================
+                if (from === config.NEWSLETTER_JID) {
                     const channelReact = (userConfig.CHANNEL_REACT || config.CHANNEL_REACT || 'true') === 'true';
                     if (channelReact) {
                         try {
                             const channelEmojis = (userConfig.CHANNEL_REACT_EMOJIS || config.CHANNEL_REACT_EMOJIS || '❤️,🔥,👍,💯,🙏,⚡').split(',');
                             const emoji = channelEmojis[Math.floor(Math.random() * channelEmojis.length)].trim();
-
-                            await conn.sendMessage(from, {
-                                react: { key: mek.key, text: emoji }
-                            });
-
-                            console.log(`✅ Reacted to newsletter 120363421104812135 with ${emoji}`);
+                            
+                            // FIX: Use newsletterReactMessage with server_id
+                            const serverId = mek.message?.newsletterServerId || mek.key.id;
+                            await conn.newsletterReactMessage(from, serverId, emoji);
+                            
+                            console.log(`✅ Reacted to newsletter ${from} with ${emoji}`);
                         } catch (e) {
                             console.log('❌ Newsletter react error:', e.message);
                         }

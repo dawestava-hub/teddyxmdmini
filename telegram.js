@@ -15,7 +15,7 @@ if (!BOT_TOKEN) {
 
 const bot = new Telegraf(BOT_TOKEN);
 const BOT_IMAGE = config.IMAGE_PATH;
-const WEB_PAIR_URL = 'https://teddyxmd1mini-1338329876db.herokuapp.com/'; // Your web link
+const WEB_PAIR_URL = config.WEB_PAIR_URL;
 const tempSessions = new Map();
 const rateLimit = new Map();
 let totalPairs = 0;
@@ -41,8 +41,8 @@ bot.start(async (ctx) => {
     const keyboard = Markup.inlineKeyboard([
         [Markup.button.callback('📱 Pair WhatsApp', 'pair'), Markup.button.callback('❓ Help', 'help')],
         [Markup.button.callback('📊 Bot Status', 'status'), Markup.button.callback('👤 Owner', 'owner')],
-        [Markup.button.url('📢 Channel', config.CHANNEL_LINK), Markup.button.url('👥 Group', config.GROUP_LINK || config.CHANNEL_LINK)],
-        [Markup.button.url('🌐 Web Pair', WEB_PAIR_URL)] // Your actual web link
+        [Markup.button.url('📢 Channel', config.CHANNEL_LINK), Markup.button.url('👥 Group', config.GROUP_LINK)],
+        [Markup.button.url('🌐 Web Pair', WEB_PAIR_URL)]
     ]);
 
     try {
@@ -127,7 +127,7 @@ bot.action('owner', async (ctx) => {
 
     const keyboard = Markup.inlineKeyboard([
         [Markup.button.url('📢 Channel', config.CHANNEL_LINK)],
-        [Markup.button.url('👥 Support Group', config.GROUP_LINK || config.CHANNEL_LINK)],
+        [Markup.button.url('👥 Support Group', config.GROUP_LINK)],
         [Markup.button.url('🌐 Web Pair', WEB_PAIR_URL)]
     ]);
 
