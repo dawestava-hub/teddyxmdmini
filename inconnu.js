@@ -34,7 +34,7 @@ const PORT = process.env.PORT || 3000;
 
 connectdb();
 
-// Start Telegram bot - FIXED: no ()
+// Start Telegram bot
 require('./telegram');
 
 const activeSockets = new Map();
@@ -385,4 +385,6 @@ app.listen(PORT, () => {
     console.log(`✅ ${config.BOT_NAME} Server running on port ${PORT}`);
 });
 
+// Export active sockets for Telegram broadcast
+module.exports.getActiveSockets = () => activeSockets;
 module.exports = router;
