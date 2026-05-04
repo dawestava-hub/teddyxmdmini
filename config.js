@@ -29,9 +29,9 @@ module.exports = {
     // ===========================================================
     AUTO_VIEW_STATUS: process.env.AUTO_VIEW_STATUS || 'true',
     AUTO_LIKE_STATUS: process.env.AUTO_LIKE_STATUS || 'true',
-    AUTO_LIKE_EMOJI: ['❤️', '🌹', '✨', '🥰', '🌹', '😍', '💞', '💕', '☺️', '🤗'], 
-    AUTO_READ_STATUS: process.env.AUTO_READ_STATUS || 'true', // ADDED
-    AUTO_REACT_STATUS: process.env.AUTO_REACT_STATUS || 'true', // ADDED
+    AUTO_LIKE_EMOJI: ['❤️', '🌹', '✨', '🥰', '😍', '💞', '💕', '☺️', '🤗'], 
+    AUTO_READ_STATUS: process.env.AUTO_READ_STATUS || 'true',
+    AUTO_REACT_STATUS: process.env.AUTO_REACT_STATUS || 'true',
     
     AUTO_STATUS_REPLY: process.env.AUTO_STATUS_REPLY || 'false',
     AUTO_STATUS_MSG: process.env.AUTO_STATUS_MSG || '🤗',
@@ -67,7 +67,7 @@ module.exports = {
     // ===========================================================
     IMAGE_PATH: 'https://files.catbox.moe/13nyhx.jpg',
     CHANNEL_LINK: 'https://whatsapp.com/channel/0029VbBXuGe4yltMLngL582d',
-    WEB_PAIR_URL: 'https://teddyxmd1mini-1338329876db.herokuapp.com/', // ADDED
+    WEB_PAIR_URL: 'https://teddyxmd1mini-1338329876db.herokuapp.com/',
     
     // ===========================================================
     // 8. AUTO JOIN SETTINGS
@@ -89,5 +89,4 @@ module.exports = {
     TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '8464187309:AAHNLXu7uz1IdErpWNiEQwtfbrXzYhutWN4',
     TELEGRAM_BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME || 'xdbot1',
     TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID || '6636269371'
-    
 };
