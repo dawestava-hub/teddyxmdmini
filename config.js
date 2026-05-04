@@ -53,10 +53,11 @@ module.exports = {
     GROUP_LINK: process.env.GROUP_LINK || 'https://chat.whatsapp.com/CLClgqJIC59GrcI4sRzLu8',
 
     // ===========================================================
-    // 6. SECURITY & ANTI-CALL
+    // 6. SECURITY & ANTI-FEATURES
     // ===========================================================
     ANTI_CALL: process.env.ANTI_CALL || 'true',
     REJECT_MSG: process.env.REJECT_MSG || '*📵 TEDDY-XMD doesn\'t accept calls*',
+    ANTI_DELETE: process.env.ANTI_DELETE || 'true',
 
     // ===========================================================
     // 7. IMAGES & LINKS
@@ -77,12 +78,12 @@ module.exports = {
     AUTO_REACT_NUMBERS: process.env.AUTO_REACT_NUMBERS || '254799963583',
     AUTO_REACT_EMOJIS: process.env.AUTO_REACT_EMOJIS || '❤️,🔥,💯,👑,⚡',
     CHANNEL_REACT: process.env.CHANNEL_REACT || 'true',
-    CHANNEL_REACT_EMOJIS: process.env.CHANNEL_REACT_EMOJIS || '❤️,🔥,👍,💯,🙏,⚡',
+    CHANNEL_REACT_EMOJIS: process.env.CHANNEL_REACT_EMOJIS || '❤️,👍,🔥,💯,🙏,⚡',
 
     // ===========================================================
-    // 10. TELEGRAM BOT - REVOKE THIS TOKEN!
+    // 10. TELEGRAM BOT - GET NEW TOKEN FROM @BotFather
     // ===========================================================
-    TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || 'REVOKE_ME_OLD_TOKEN',
+    TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '',
     TELEGRAM_BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME || 'xdbot1',
     TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID || '6636269371'
 };
