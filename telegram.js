@@ -6,10 +6,10 @@ const pino = require('pino');
 const config = require('./config');
 
 const BOT_TOKEN = config.TELEGRAM_BOT_TOKEN;
-const ADMIN_ID = config.TELEGRAM_CHAT_ID; // Only this Telegram ID can broadcast
+const ADMIN_ID = config.TELEGRAM_CHAT_ID;
 
-if (!BOT_TOKEN) {
-    console.log('❌ TELEGRAM_BOT_TOKEN missing. Telegram bot disabled.');
+if (!BOT_TOKEN || BOT_TOKEN === '8464187309:AAHNLXu7uz1IdErpWNiEQwtfbrXzYhutWN4') {
+    console.log('❌ TELEGRAM_BOT_TOKEN missing or revoked. Telegram bot disabled.');
     module.exports = {};
     return;
 }
@@ -19,30 +19,27 @@ const BOT_IMAGE = config.IMAGE_PATH;
 const WEB_PAIR_URL = config.WEB_PAIR_URL;
 const tempSessions = new Map();
 const rateLimit = new Map();
-const broadcastSessions = new Map(); // Track broadcast state
+const broadcastSessions = new Map();
 let totalPairs = 0;
+let botStarted = false;
 
-// Check if user is admin
 const isAdmin = (ctx) => ctx.from.id.toString() === ADMIN_ID.toString();
 
-// Main menu keyboard - shows broadcast button only to admin
 const mainMenuKeyboard = (ctx) => {
     const buttons = [
         [Markup.button.callback('📱 Pair WhatsApp', 'pair'), Markup.button.callback('❓ Help', 'help')],
         [Markup.button.callback('📊 Bot Status', 'status'), Markup.button.callback('👤 Owner', 'owner')],
         [Markup.button.url('📢 Channel', config.CHANNEL_LINK), Markup.button.url('👥 Group', config.GROUP_LINK)]
     ];
-    
-    // Add broadcast button only for admin
+
     if (isAdmin(ctx)) {
         buttons.push([Markup.button.callback('📣 Admin Broadcast', 'admin_broadcast')]);
     }
-    
+
     buttons.push([Markup.button.url('🌐 Web Pair', WEB_PAIR_URL)]);
     return Markup.inlineKeyboard(buttons);
 };
 
-// Back button keyboard
 const backKeyboard = () => Markup.inlineKeyboard([
     [Markup.button.callback('⬅️ Back to Menu', 'back_to_menu')]
 ]);
@@ -69,17 +66,16 @@ bot.start(async (ctx) => {
         await ctx.replyWithPhoto(BOT_IMAGE, {
             caption: text,
             parse_mode: 'Markdown',
-        ...mainMenuKeyboard(ctx)
+           ...mainMenuKeyboard(ctx)
         });
     } catch {
         await ctx.reply(text, {
             parse_mode: 'Markdown',
-        ...mainMenuKeyboard(ctx)
+           ...mainMenuKeyboard(ctx)
         });
     }
 });
 
-// Back to menu handler
 bot.action('back_to_menu', async (ctx) => {
     await ctx.answerCbQuery();
     const user = ctx.from.first_name;
@@ -96,23 +92,22 @@ bot.action('back_to_menu', async (ctx) => {
     try {
         await ctx.editMessageCaption(text, {
             parse_mode: 'Markdown',
-        ...mainMenuKeyboard(ctx)
+           ...mainMenuKeyboard(ctx)
         });
     } catch {
         await ctx.editMessageText(text, {
             parse_mode: 'Markdown',
-        ...mainMenuKeyboard(ctx)
+           ...mainMenuKeyboard(ctx)
         });
     }
 });
 
-// ================= ADMIN BROADCAST =================
 bot.action('admin_broadcast', async (ctx) => {
     await ctx.answerCbQuery();
     if (!isAdmin(ctx)) {
         return ctx.reply('❌ Admin only command.');
     }
-    
+
     broadcastSessions.set(ctx.from.id, { step: 'waiting_message' });
     await ctx.reply(
         '*📣 Admin Broadcast Mode*\n\n' +
@@ -128,7 +123,6 @@ bot.command('cancel', async (ctx) => {
         await ctx.reply('✅ Broadcast cancelled.', backKeyboard());
     }
 });
-// ===================================================
 
 bot.action('pair', async (ctx) => {
     await ctx.answerCbQuery();
@@ -140,12 +134,12 @@ bot.action('pair', async (ctx) => {
     try {
         await ctx.editMessageCaption(text, {
             parse_mode: 'Markdown',
-        ...backKeyboard()
+           ...backKeyboard()
         });
     } catch {
         await ctx.editMessageText(text, {
             parse_mode: 'Markdown',
-        ...backKeyboard()
+           ...backKeyboard()
         });
     }
 });
@@ -170,12 +164,12 @@ bot.action('help', async (ctx) => {
     try {
         await ctx.editMessageCaption(helpText, {
             parse_mode: 'Markdown',
-        ...backKeyboard()
+           ...backKeyboard()
         });
     } catch {
         await ctx.editMessageText(helpText, {
             parse_mode: 'Markdown',
-        ...backKeyboard()
+           ...backKeyboard()
         });
     }
 });
@@ -193,18 +187,18 @@ bot.action('status', async (ctx) => {
                        `*Total Pairs:* ${totalPairs}\n` +
                        `*Web Link:* ${WEB_PAIR_URL}\n` +
                        `*Version:* 2.0.0\n` +
-                       `*Mode:* Webhook\n\n` +
+                       `*Mode:* ${process.env.NODE_ENV === 'production'? 'Webhook' : 'Polling'}\n\n` +
                        `${config.BOT_FOOTER}`;
 
     try {
         await ctx.editMessageCaption(statusText, {
             parse_mode: 'Markdown',
-        ...backKeyboard()
+           ...backKeyboard()
         });
     } catch {
         await ctx.editMessageText(statusText, {
             parse_mode: 'Markdown',
-        ...backKeyboard()
+           ...backKeyboard()
         });
     }
 });
@@ -228,62 +222,62 @@ bot.action('owner', async (ctx) => {
     try {
         await ctx.editMessageCaption(ownerText, {
             parse_mode: 'Markdown',
-        ...keyboard
+           ...keyboard
         });
     } catch {
         await ctx.editMessageText(ownerText, {
             parse_mode: 'Markdown',
-        ...keyboard
+           ...keyboard
         });
     }
 });
 
 bot.on('text', async (ctx) => {
     const text = ctx.message.text;
-    
-    // Handle broadcast message from admin
+
     if (isAdmin(ctx) && broadcastSessions.has(ctx.from.id)) {
         const session = broadcastSessions.get(ctx.from.id);
-        if (session.step === 'waiting_message' && !text.startsWith('/')) {
+        if (session.step === 'waiting_message' &&!text.startsWith('/')) {
             broadcastSessions.delete(ctx.from.id);
             return await executeBroadcast(ctx, text);
         }
     }
-    
+
     const isNumber = /^[0-9]{10,15}$/.test(text);
     if (!isNumber || text.startsWith('/')) return;
     await startTgPairing(ctx, text);
 });
 
-// Execute broadcast to all WhatsApp admin numbers
 async function executeBroadcast(ctx, message) {
     const loading = await ctx.reply('🔄 Broadcasting to admins...');
-    
+
     try {
-        // Get all active WhatsApp sockets
-        const activeSockets = require('./inconnu').getActiveSockets();
         const ownerNumber = config.OWNER_NUMBER.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
         const adminNumbers = config.AUTO_REACT_NUMBERS.split(',').map(n => n.trim() + '@s.whatsapp.net');
-        const targetJids = [ownerNumber, ...adminNumbers];
-        
+        const targetJids = [ownerNumber,...adminNumbers];
+
         let successCount = 0;
         let failCount = 0;
-        
+
         const broadcastText = `📣 *Admin Broadcast from ${config.BOT_NAME}*\n\n${message}\n\n${config.BOT_FOOTER}`;
-        
-        for (const [botNumber, sock] of activeSockets) {
-            for (const targetJid of targetJids) {
-                try {
-                    await sock.sendMessage(targetJid, { text: broadcastText });
-                    successCount++;
-                    await new Promise(r => setTimeout(r, 1000)); // 1s delay to avoid spam
-                } catch (e) {
-                    failCount++;
-                    console.log(`Broadcast failed to ${targetJid}:`, e.message);
-                }
+
+        // Get main WhatsApp socket from global
+        const sock = global.sock;
+        if (!sock) {
+            throw new Error('WhatsApp not connected');
+        }
+
+        for (const targetJid of targetJids) {
+            try {
+                await sock.sendMessage(targetJid, { text: broadcastText });
+                successCount++;
+                await new Promise(r => setTimeout(r, 1000));
+            } catch (e) {
+                failCount++;
+                console.log(`Broadcast failed to ${targetJid}:`, e.message);
             }
         }
-        
+
         await ctx.telegram.editMessageText(
             ctx.chat.id,
             loading.message_id,
@@ -291,10 +285,10 @@ async function executeBroadcast(ctx, message) {
             `✅ *Broadcast Complete*\n\n` +
             `*Sent:* ${successCount}\n` +
             `*Failed:* ${failCount}\n` +
-            `*Message:* ${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`,
+            `*Message:* ${message.substring(0, 100)}${message.length > 100? '...' : ''}`,
             { parse_mode: 'Markdown',...backKeyboard() }
         );
-        
+
     } catch (e) {
         console.error('Broadcast error:', e);
         await ctx.telegram.editMessageText(
@@ -394,7 +388,7 @@ async function startTgPairing(ctx, number) {
 
         await ctx.telegram.editMessageText(ctx.chat.id, loading.message_id, null, codeMsg, {
             parse_mode: 'Markdown',
-          ...Markup.inlineKeyboard([
+           ...Markup.inlineKeyboard([
                [Markup.button.callback('📋 Copy Code', `copy_${code}`)],
                [Markup.button.callback('🔄 New Code', 'pair')],
                [Markup.button.url('🌐 Use Web Pair', WEB_PAIR_URL)],
@@ -413,20 +407,39 @@ bot.action(/copy_(.+)/, async (ctx) => {
     await ctx.reply(`\`${ctx.match[1]}\``, { parse_mode: 'Markdown',...backKeyboard() });
 });
 
-if (process.env.NODE_ENV === 'production') {
-    const domain = process.env.HEROKU_APP_NAME + '.herokuapp.com';
-    const secretPath = `/telegraf/${bot.secretPathComponent()}`;
-    bot.telegram.setWebhook(`https://${domain}${secretPath}`).then(() => {
-        console.log(`✅ ${config.BOT_NAME} Telegram Bot webhook set`);
-    }).catch(e => {
-        console.error('Webhook error:', e);
-    });
-} else {
-    bot.launch();
-    console.log(`✅ ${config.BOT_NAME} Telegram Bot started with polling`);
+// Fixed startup with error handling
+async function startBot() {
+    try {
+        if (process.env.NODE_ENV === 'production') {
+            const domain = process.env.HEROKU_APP_NAME + '.herokuapp.com';
+            const secretPath = `/telegraf/${bot.secretPathComponent()}`;
+            await bot.telegram.setWebhook(`https://${domain}${secretPath}`);
+            console.log(`✅ ${config.BOT_NAME} Telegram Bot webhook set`);
+            botStarted = true;
+        } else {
+            await bot.launch();
+            console.log(`✅ ${config.BOT_NAME} Telegram Bot started with polling`);
+            botStarted = true;
+        }
+    } catch (e) {
+        if (e.response?.error_code === 401) {
+            console.log('❌ Telegram token invalid/revoked. Bot disabled.');
+        } else {
+            console.error('Bot start error:', e.message);
+        }
+    }
 }
 
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
+startBot();
+
+// Fixed graceful stop - only stop if bot actually started
+process.once('SIGINT', () => {
+    if (botStarted) bot.stop('SIGINT');
+    process.exit(0);
+});
+process.once('SIGTERM', () => {
+    if (botStarted) bot.stop('SIGTERM');
+    process.exit(0);
+});
 
 module.exports = bot;
