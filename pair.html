@@ -21,7 +21,6 @@
             100% { transform: translateY(100vh); }
         }
 
-        :root { --primary: #00f3ff; --secondary: #0077ff; }
         body {
             background: #000;
             display: flex;
@@ -34,7 +33,6 @@
             overflow: hidden;
         }
 
-        /* MATRIX RAIN BACKGROUND - ONLY ADDITION */
         #matrix {
             position: fixed;
             top: 0;
@@ -45,7 +43,6 @@
             opacity: 0.15;
         }
 
-        /* CRT Scanlines overlay */
         body::before {
             content: "";
             position: fixed;
@@ -55,17 +52,16 @@
             height: 100%;
             background: repeating-linear-gradient(
                 0deg,
-                rgba(0, 170, 255, 0.03) 0px,
+                rgba(255, 0, 64, 0.03) 0px,
                 transparent 1px,
                 transparent 2px,
-                rgba(0, 170, 255, 0.03) 3px
+                rgba(255, 0, 64, 0.03) 3px
             );
             pointer-events: none;
             z-index: 1;
             animation: flicker 0.15s infinite;
         }
 
-        /* Moving Scanline */
         body::after {
             content: "";
             position: fixed;
@@ -73,73 +69,65 @@
             left: 0;
             width: 100%;
             height: 2px;
-            background: rgba(0, 170, 255, 0.2);
-            box-shadow: 0 0 10px #00aaff;
+            background: #ff0040;
+            box-shadow: 0 0 10px #ff0040;
             animation: scanline 8s linear infinite;
             pointer-events: none;
             z-index: 2;
+            opacity: 0.2;
         }
 
-       .main-wrapper {
+      .main-wrapper {
             position: relative;
             padding: 2px;
-            background: linear-gradient(90deg, #0033ff, #00aaff, #00f3ff, #0055ff, #0033ff);
             background-size: 200% 200%;
             animation: rgbMove 3s linear infinite;
             border-radius: 15px;
             max-width: 350px;
             width: 90%;
             margin: 20px auto;
-            box-shadow: 0 0 40px rgba(0, 170, 255, 0.3), 0 0 80px rgba(0, 100, 255, 0.15);
             z-index: 10;
         }
 
-       .inner-content {
-            background: linear-gradient(135deg, rgba(0, 20, 60, 0.92) 0%, rgba(0, 10, 30, 0.97) 60%, rgba(0, 5, 20, 0.98) 100%);
+      .inner-content {
+            background: linear-gradient(135deg, rgba(60, 0, 20, 0.92) 0%, rgba(30, 0, 10, 0.97) 60%, rgba(20, 0, 5, 0.98) 100%);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             padding: 20px;
             border-radius: 12px;
             text-align: center;
-            border: 1px solid rgba(0, 200, 255, 0.15);
         }
 
         h1 {
             font-family: 'Orbitron';
             font-size: 1.8rem;
-            color: #fff;
-            text-shadow: 0 0 10px #00f3ff, 0 0 30px rgba(0, 150, 255, 0.5);
             font-weight: 900;
             margin-bottom: 8px;
         }
 
-       .status-line {
+      .status-line {
             font-weight: 800;
             font-size: 0.9rem;
             margin-bottom: 5px;
             letter-spacing: 1px;
-            color: #7ab8d4;
         }
 
-       .bot-counter {
+      .bot-counter {
             font-family: 'Orbitron';
             font-size: 0.75rem;
-            color: #00aaff;
             margin-bottom: 15px;
             font-weight: bold;
         }
 
-       .label {
+      .label {
             font-size: 0.7rem;
-            color: #7ab8d4;
             margin-bottom: 5px;
             text-align: left;
             font-weight: 700;
         }
 
-       .input-box {
+      .input-box {
             position: relative; padding: 2px;
-            background: linear-gradient(90deg, #00f3ff, #0055ff, #00f3ff);
             background-size: 200%;
             animation: rgbMove 2s linear infinite;
             border-radius: 10px;
@@ -148,54 +136,44 @@
 
         input {
             width: 100%; padding: 15px;
-            background: rgba(0, 10, 30, 0.9); border: none;
-            color: #00f3ff; font-family: 'Orbitron';
+            background: rgba(30, 0, 10, 0.9); border: none;
+            font-family: 'Orbitron';
             font-size: 1rem; font-weight: bold;
             text-align: center; border-radius: 8px;
             outline: none; box-sizing: border-box;
         }
 
-       .btn-box {
+      .btn-box {
             position: relative; padding: 2px;
-            background: linear-gradient(90deg, #003399, #0055ff, #00aaff, #003399);
             background-size: 200%;
             animation: rgbMove 1.5s linear infinite;
             border-radius: 10px;
             margin-bottom: 12px;
         }
 
-       .btn-box.tg {
-            background: linear-gradient(90deg, #0088cc, #22a1d3, #00aaff, #0088cc);
-        }
-
         button {
             width: 100%; padding: 15px;
-            background: linear-gradient(135deg, rgba(0, 20, 60, 0.95) 0%, rgba(0, 10, 40, 0.98) 100%);
-            color: #fff; border: none;
+            background: linear-gradient(135deg, rgba(60, 0, 20, 0.95) 0%, rgba(40, 0, 10, 0.98) 100%);
+            border: none;
             font-family: 'Orbitron'; font-size: 1.1rem;
             font-weight: 900; cursor: pointer;
             border-radius: 8px; text-transform: uppercase;
             display: flex; align-items: center; justify-content: center; gap: 10px;
         }
 
-       .btn-box.tg button {
-            background: linear-gradient(135deg, rgba(0, 136, 204, 0.95) 0%, rgba(0, 100, 160, 0.98) 100%);
-        }
-
         button:active { transform: scale(0.98); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-       .code-display {
+      .code-display {
             font-family: 'Orbitron', sans-serif;
-            font-size: 1.8rem; color: #00aaff;
-            text-shadow: 0 0 15px #00aaff; letter-spacing: 5px;
-            border: 1px dashed rgba(0, 180, 255, 0.6);
+            font-size: 1.8rem;
+            letter-spacing: 5px;
             padding: 10px; margin-top: 10px;
-            background: rgba(0, 50, 120, 0.2); border-radius: 6px;
+            background: rgba(120, 0, 30, 0.2); border-radius: 6px;
+            cursor: pointer;
         }
 
-       .loader {
-            border: 3px solid rgba(0, 100, 255, 0.15);
-            border-top: 3px solid #00f3ff;
+      .loader {
             border-radius: 50%; width: 30px; height: 30px;
             animation: spin 1s linear infinite; margin: 0 auto;
         }
@@ -207,135 +185,172 @@
 
 <canvas id="matrix"></canvas>
 
-<div class="main-wrapper">
-    <div class="inner-content">
-        <h1>TEDDY-XMD</h1>
-        <div class="status-line">👑 SYSTEM IS <span style="color:#00f3ff;">ACTIVE 👑</span></div>
-        <div class="bot-counter">Bots Connected: <span id="count-num" style="color:#fff;">0</span> / 1000</div>
+<div class="main-wrapper" id="wrapper">
+    <div class="inner-content" id="content">
+        <h1 id="title">TEDDY-XMD</h1>
+        <div class="status-line" id="status">👑 SYSTEM IS <span id="active">ACTIVE 👑</span></div>
+        <div class="bot-counter" id="counter">Bots Connected: <span id="count-num">0</span> / 1000</div>
 
-        <div class="input-box">
+        <div class="input-box" id="inputBox">
             <input type="text" id="number" placeholder="254..." autocomplete="off">
         </div>
 
-        <div class="label">WEB PAIRING:</div>
-        <div class="btn-box">
-            <button onclick="getCode()">GET PAIRING CODE</button>
+        <div class="label" id="label1">WEB PAIRING:</div>
+        <div class="btn-box" id="btnBox1">
+            <button id="pairBtn" onclick="getCode()">GET PAIRING CODE</button>
         </div>
 
-        <div class="label" style="margin-top:15px;">TELEGRAM ALTERNATE:</div>
-        <div class="btn-box tg">
+        <div class="label" id="label2" style="margin-top:15px;">TELEGRAM ALTERNATE:</div>
+        <div class="btn-box" id="btnBox2">
             <button onclick="pairTelegram()">
                 <i class="fab fa-telegram-plane"></i> PAIR VIA TELEGRAM
             </button>
         </div>
 
-        <div id="result" style="margin-top: 20px; font-weight: 900; font-size: 1.1rem; color: #00aaff; min-height: 60px;"></div>
+        <div id="result" style="margin-top: 20px; font-weight: 900; font-size: 1.1rem; min-height: 60px;"></div>
 
-        <footer style="margin-top: 20px; font-weight: 800; color: #fff; font-size: 0.75rem; opacity: 0.7;">
+        <footer id="footer" style="margin-top: 20px; font-weight: 800; font-size: 0.75rem; opacity: 0.7;">
             ⚡ Powered by TEDDY-XMD ⚡
         </footer>
     </div>
 </div>
 
 <script>
-    // MATRIX RAIN - ONLY JS ADDED
+// AUTO COLOR CYCLING + MATRIX
+(function() {
+    const colors = ['#ff0040','#ff8800','#00ff00','#00f3ff','#ff00ff'];
+    let i = 0;
+    let matrixColor = '#ff0040';
+
+    function applyColor(c) {
+        matrixColor = c;
+        const glow = c + '80';
+
+        // Update all elements directly - no CSS vars
+        document.querySelectorAll('#title,#status,#active,#counter,#label1,#label2,#pairBtn,#result,#footer,#count-num').forEach(el => {
+            el.style.color = c;
+            el.style.textShadow = `0 0 10px ${c}`;
+        });
+
+        document.getElementById('wrapper').style.background = `linear-gradient(90deg, ${c}, ${c}, ${c})`;
+        document.getElementById('wrapper').style.boxShadow = `0 0 40px ${glow}, 0 0 80px ${glow}`;
+        document.getElementById('content').style.border = `1px solid ${c}`;
+        document.getElementById('inputBox').style.background = `linear-gradient(90deg, ${c}, ${c}, ${c})`;
+        document.getElementById('btnBox1').style.background = `linear-gradient(90deg, ${c}, ${c}, ${c})`;
+        document.getElementById('btnBox2').style.background = `linear-gradient(90deg, ${c}, ${c}, ${c})`;
+        document.getElementById('number').style.color = c;
+        document.querySelectorAll('.code-display').forEach(el => {
+            el.style.color = c;
+            el.style.border = `1px dashed ${c}`;
+            el.style.textShadow = `0 0 15px ${c}`;
+        });
+        document.querySelectorAll('.loader').forEach(el => {
+            el.style.border = `3px solid ${glow}`;
+            el.style.borderTop = `3px solid ${c}`;
+        });
+    }
+
+    function cycle() {
+        applyColor(colors[i]);
+        console.log('Color:', colors[i]);
+        i = (i + 1) % colors.length;
+    }
+
+    cycle();
+    setInterval(cycle, 2000);
+
+    // MATRIX RAIN
     const canvas = document.getElementById('matrix');
     const ctx = canvas.getContext('2d');
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     const chars = '01TEDDYXMD';
-    const charArray = chars.split('');
     const fontSize = 14;
     const columns = canvas.width / fontSize;
-    const drops = [];
-    for (let x = 0; x < columns; x++) drops[x] = Math.random() * -100;
+    const drops = Array(Math.floor(columns)).fill(0);
+
     function drawMatrix() {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#00aaff';
+        ctx.fillStyle = matrixColor;
         ctx.font = fontSize + 'px monospace';
         for (let i = 0; i < drops.length; i++) {
-            const text = charArray[Math.floor(Math.random() * charArray.length)];
+            const text = chars[Math.floor(Math.random() * chars.length)];
             ctx.fillText(text, i * fontSize, drops[i] * fontSize);
             if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
             drops[i]++;
         }
     }
     setInterval(drawMatrix, 35);
+
     window.addEventListener('resize', () => {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
     });
+})();
 
-    const MAX_BOTS = 1000;
-    let currentBots = parseInt(localStorage.getItem('teddy_xmd_bot_count')) || 0;
-    document.getElementById('count-num').innerText = currentBots;
+// BOT LOGIC
+let currentBots = parseInt(localStorage.getItem('teddy_xmd_bot_count')) || 0;
+document.getElementById('count-num').innerText = currentBots;
 
-    const TG_BOT_USERNAME = 'Teddyxmdbot'; // Replace with your bot username from @BotFather
+const TG_BOT_USERNAME = 'Teddyxmdbot';
 
-    async function getCode() {
-        const numberInput = document.getElementById("number");
-        const resDiv = document.getElementById("result");
-        let num = numberInput.value.replace(/[^0-9]/g, '');
+async function getCode() {
+    const numberInput = document.getElementById("number");
+    const resDiv = document.getElementById("result");
+    const pairBtn = document.getElementById("pairBtn");
+    let num = numberInput.value.replace(/[^0-9]/g, '');
 
-        if (!num) {
-            resDiv.innerHTML = "<span style='color:#ff0055;'>Please enter your number first!</span>";
-            return;
-        }
-
-        resDiv.innerHTML = '<div class="loader"></div><div style="margin-top:10px; font-size:0.8rem;">Generating session code... Please wait</div>';
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20000);
-
-        try {
-            const response = await fetch(`/code?number=${num}`, { signal: controller.signal });
-            const data = await response.json();
-            clearTimeout(timeoutId);
-
-            if (data.code) {
-                resDiv.innerHTML = `
-                    <div style="font-size:0.8rem; color:#aaa">YOUR PAIRING CODE:</div>
-                    <div class="code-display" onclick="copyCode('${data.code}')">${data.code}</div>
-                    <div style="font-size:0.7rem; color:#7ab8d4; margin-top:8px;">Tap code to copy</div>
-                `;
-                currentBots++;
-                localStorage.setItem('teddy_xmd_bot_count', currentBots);
-                document.getElementById('count-num').innerText = currentBots;
-            } else {
-                resDiv.innerHTML = "<span style='color:#ff0055'>[ERROR] Server rejected the request</span>";
-            }
-        } catch (e) {
-            if (e.name === 'AbortError') {
-                resDiv.innerHTML = "<span style='color:#0f0;'>Session is active or timed out<br><small style='font-size:0.7rem;'>Check your WhatsApp</small></span>";
-            } else {
-                resDiv.innerHTML = "<span style='color:#ff0055'>[CRITICAL] Cannot reach server</span>";
-                console.error(e);
-            }
-        }
+    if (!num || num.length < 10) {
+        resDiv.innerHTML = "<span>Invalid number! Use 254712345678</span>";
+        return;
     }
 
-    function pairTelegram() {
-        const numberInput = document.getElementById("number");
-        const resDiv = document.getElementById("result");
-        let num = numberInput.value.replace(/[^0-9]/g, '');
+    pairBtn.disabled = true;
+    resDiv.innerHTML = '<div class="loader"></div><div style="margin-top:10px; font-size:0.8rem;">Generating code...</div>';
 
-        if (!num) {
-            resDiv.innerHTML = "<span style='color:#ff0055;'>Please enter your number first!</span>";
-            return;
+    try {
+        const response = await fetch(`/code?number=${num}`);
+        const data = await response.json();
+        if (data.code) {
+            resDiv.innerHTML = `
+                <div style="font-size:0.8rem;">YOUR PAIRING CODE:</div>
+                <div class="code-display" onclick="copyCode('${data.code}')">${data.code}</div>
+                <div style="font-size:0.7rem; margin-top:8px;">Tap code to copy • Expires in 60s</div>
+            `;
+            currentBots++;
+            localStorage.setItem('teddy_xmd_bot_count', currentBots);
+            document.getElementById('count-num').innerText = currentBots;
+        } else {
+            resDiv.innerHTML = `<span>[ERROR] ${data.error || 'Server error'}</span>`;
         }
-
-        const tgUrl = `https://t.me/${TG_BOT_USERNAME}?start=pair_${num}`;
-        window.open(tgUrl, '_blank');
-        resDiv.innerHTML = "<span style='color:#00aaff;'>Opening Telegram...<br><small style='font-size:0.7rem;'>Check your Telegram app to continue</small></span>";
+    } catch (e) {
+        resDiv.innerHTML = "<span>[CRITICAL] Cannot reach server</span>";
+    } finally {
+        pairBtn.disabled = false;
     }
+}
 
-    function copyCode(code) {
-        navigator.clipboard.writeText(code);
-        const display = document.querySelector('.code-display');
-        display.innerText = "COPIED!";
-        setTimeout(() => { display.innerText = code; }, 1500);
+function pairTelegram() {
+    const num = document.getElementById("number").value.replace(/[^0-9]/g, '');
+    if (!num || num.length < 10) {
+        document.getElementById("result").innerHTML = "<span>Please enter your number first!</span>";
+        return;
     }
+    window.open(`https://t.me/${TG_BOT_USERNAME}?start=pair_${num}`, '_blank');
+    document.getElementById("result").innerHTML = "<span>Opening Telegram...</span>";
+}
+
+function copyCode(code) {
+    navigator.clipboard.writeText(code);
+    const display = document.querySelector('.code-display');
+    display.innerText = "COPIED!";
+    setTimeout(() => { display.innerText = code; }, 1500);
+}
+
+document.getElementById("number").addEventListener("keypress", (e) => {
+    if (e.key === "Enter") getCode();
+});
 </script>
 </body>
 </html>
