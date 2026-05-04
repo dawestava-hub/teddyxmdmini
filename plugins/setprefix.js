@@ -1,76 +1,59 @@
-const { cmd } = require('../inconnuboy');
-const config = require('../config');
+const fs = require('fs');
+const path = require('path');
 
-cmd({
-    pattern: "setprefix",
-    desc: "Update prefix with iOS style and fake vCard",
-    category: "owner",
-    react: "⚙️",
-    filename: __filename
-}, async (conn, m, mek, { from, reply, text, isOwner }) => {
+module.exports = {
+  name: "setprefix",
+  alias: ["prefix", "setpfx"],
+  desc: "Change bot command prefix. Owner only.",
+  category: "owner",
+  react: "⚙️",
+  start: async (conn, mek, m, { isOwner, text, reply }) => {
 
-    // 🛡️ Owner Check
-    if (!isOwner) return reply("*❌ ᴏᴡɴᴇʀ ᴏɴʟʏ ᴄᴏᴍᴍᴀɴᴅ*");
+    if (!isOwner) return reply("❌ Owner only command!");
 
-    // Check for input
-    if (!text) return reply("*⚠️ ᴘʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ɴᴇᴡ ᴘʀᴇғɪx (ᴇ.ɢ .sᴇᴛᴘʀᴇғɪx !)*");
+    if (!text) {
+      return reply(
+        `*Current Prefix:* \`${global.prefix || '.'}\`\n\n` +
+        `*Usage:* ${global.prefix || '.'}setprefix <symbol>\n` +
+        `*Example:* ${global.prefix || '.'}setprefix!\n\n` +
+        `*Note:* Single character only. No letters/numbers.`
+      );
+    }
+
+    if (text.length!== 1 || /[a-zA-Z0-9]/.test(text)) {
+      return reply("❌ Prefix must be 1 special character only.\n*Examples:*.! # $ /");
+    }
+
+    const oldPrefix = global.prefix || '.';
+    global.prefix = text;
 
     try {
-        const previousPrefix = config.PREFIX;
-        const newPrefix = text.trim();
-        
-        // Update the live config
-        config.PREFIX = newPrefix;
+      const configPath = path.join(__dirname, '../config.js');
+      let configFile = fs.readFileSync(configPath, 'utf8');
 
-        // Define the iOS-style fake vCard (Popkid Ke)
-        const fakevCard = {
-            key: {
-                fromMe: false,
-                participant: "0@s.whatsapp.net",
-                remoteJid: "status@broadcast"
-            },
-            message: {
-                contactMessage: {
-                    displayName: " TEDDY-XMD SETTINGS",
-                    vcard: `BEGIN:VCARD\nVERSION:3.0\nFN:Popkid Ke\nORG:𝐓𝐄𝐃𝐃𝐘-𝐗𝐌𝐃;\nTEL;type=CELL;type=VOICE;waid=254799963583:+254799963583\nEND:VCARD`
-                }
-            }
-        };
+      configFile = configFile.replace(
+        /PREFIX:\s*process\.env\.PREFIX\s*\|\|\s*['"`](.*?)['"`]/,
+        `PREFIX: process.env.PREFIX || '${text}'`
+      );
 
-        // iOS Styled Caption
-        const caption = `* 𝚃𝙴𝙳𝙳𝚈-𝚇𝙼𝙳 ꜱʏꜱᴛᴇᴍ ᴄᴏɴꜰɪɢ* ⚙️\n\n` +
-                        `*✨ ꜱᴛᴀᴛᴜꜱ:* Prefix Successfully Migrated\n\n` +
-                        `*⬅️ ᴘʀᴇᴠɪᴏᴜꜱ:* 「 ${previousPrefix} 」\n` +
-                        `*➡️ ᴄᴜʀʀᴇɴᴛ:* 「 ${newPrefix} 」\n\n` +
-                        `*💡 ɴᴏᴛᴇ:* All commands including words/letters now trigger with *${newPrefix}*\n\n` +
-                        `> *ᴘᴏᴡᴇʀᴇᴅ ʙʏ 𝚃𝙴𝙳𝙳𝚈-𝚇𝙼𝙳*`;
+      fs.writeFileSync(configPath, configFile);
 
-        // Send with Newsletter Context (Small Thumbnail - iOS Style)
-        await conn.sendMessage(from, { 
-            image: { url: config.ALIVE_IMG || "https://files.catbox.moe/13nyhx.jpg" }, 
-            caption: caption,
-            contextInfo: {
-                mentionedJid: [m.sender],
-                forwardingScore: 999,
-                isForwarded: true,
-                forwardedNewsletterMessageInfo: {
-                    newsletterJid: config.NEWSLETTER_JID || '120363421104812135@newsletter',
-                    newsletterName: "𝚃𝙴𝙳𝙳𝚈-𝚇𝙼𝙳 ꜱʏꜱᴛᴇᴍ ᴜᴘᴅᴀᴛᴇꜱ",
-                    serverMessageId: 1
-                },
-                externalAdReply: {
-                    title: " ᴘʀᴇꜰɪx ᴍᴀɴᴀɢᴇʀ",
-                    body: `ꜱʏꜱᴛᴇᴍ ᴘʀᴇꜰɪx: ${newPrefix}`,
-                    mediaType: 1,
-                    renderLargerThumbnail: false,
-                    thumbnailUrl: "https://files.catbox.moe/13nyhx.jpg",
-                    sourceUrl: "https://whatsapp.com/channel/0029Vb6NveDBPzjPa4vIRt3n"
-                }
-            }
-        }, { quoted: fakevCard });
+      await reply(
+        `✅ *Prefix Updated*\n\n` +
+        `*Old:* \`${oldPrefix}\`\n` +
+        `*New:* \`${text}\`\n\n` +
+        `All commands now use \`${text}\`\n` +
+        `*Example:* ${text}menu\n\n` +
+        `⚠️ Restart bot to apply to all plugins`
+      );
 
     } catch (e) {
-        console.error("SET_PREFIX_ERROR:", e);
-        reply("*❗ sʏsᴛᴇᴍ ᴇʀʀᴏʀ: ᴜɴᴀʙʟᴇ ᴛᴏ ᴍᴏᴅɪғʏ ᴘʀᴇғɪx*");
+      await reply(
+        `⚠️ *Prefix changed for this session*\n\n` +
+        `*New:* \`${text}\`\n\n` +
+        `❌ Could not save to config.js: ${e.message}\n` +
+        `Prefix will reset on restart.`
+      );
     }
-});
+  }
+}
