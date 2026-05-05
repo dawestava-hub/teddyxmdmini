@@ -4,7 +4,7 @@
   "description": "A WhatsApp Bot Created By TEDDY-XMD",
   "main": "inconnu.js",
   "scripts": {
-    "start": "node inconnue.js",
+    "start": "node inconnu.js",
     "stop": "pm2 stop TEDDY-XMD",
     "restart": "pm2 restart TEDDY-XMD"
   },
