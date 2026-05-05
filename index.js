@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
-const path = require("path");
+const path = require("path"); // Added to handle file paths
 
 const app = express();
 
@@ -18,36 +18,23 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "pair.html"));
 });
 
-// ✅ Start bot logic (no double server)
-const { startBot, activeSockets } = require("./inconnu");
+// Router Load
+const pairRouter = require("./inconnu");
+app.use("/", pairRouter);
 
-// ✅ Pair route
-app.get("/pair", async (req, res) => {
-    let number = req.query.number;
-    if (!number) return res.status(400).json({ error: "Number required" });
-    number = number.replace(/[^0-9]/g, "");
-    if (number.length < 11) return res.status(400).json({ error: "Use 254712345678 format" });
-    try {
-        await startBot(number, res, true);
-    } catch (e) {
-        if (!res.headersSent) res.status(500).json({ error: e.message });
-    }
-});
-
-// ✅ Health Check Route
+// ✅ Health Check Route (Very Important)
 app.get("/ping", (req, res) => {
     res.status(200).json({
         status: "ok",
-        message: "Server running",
-        activeBots: activeSockets.size
+        message: "Server running"
     });
 });
 
-// 🔥 Prevent Dyno Sleep
+// 🔥 Prevent Heroku Dyno Sleep Crash
 setInterval(() => {}, 1000000);
 
 // Server Start
-app.listen(PORT, "0.0.0.0", () => {
+app.listen(PORT, () => {
     console.log("🚀 Server running on port", PORT);
 });
 
