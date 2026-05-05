@@ -83,7 +83,7 @@ module.exports = {
     // ===========================================================
     // 10. TELEGRAM BOT - GET NEW TOKEN FROM @BotFather
     // ===========================================================
-    TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '',
+    TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '8628995376:AAEfaPuN7cWZPXZh3jDfNgpLgS3R6t1lbCc',
     TELEGRAM_BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME || 'xdbot1',
     TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID || '6636269371'
 };
