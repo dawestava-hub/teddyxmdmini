@@ -3,7 +3,8 @@ const {
     useMultiFileAuthState,
     delay,
     makeCacheableSignalKeyStore,
-    DisconnectReason
+    DisconnectReason,
+    Browsers
 } = require('@whiskeysockets/baileys');
 
 const config = require('./config');
@@ -28,6 +29,10 @@ const pino = require('pino');
 const express = require('express');
 
 const router = express.Router();
+const app = express();
+app.use(express.json());
+app.use(express.static('public'));
+
 global.prefix = config.PREFIX || '.';
 
 connectdb().catch(e => console.log('⚠️ DB error:', e.message));
@@ -60,7 +65,7 @@ catch (e) { groupEvents = async () => {}; }
 async function isFollowingNewsletter(conn, jid) {
     try {
         const meta = await conn.newsletterMetadata('jid', jid);
-        return!!meta?.viewer_metadata;
+        return !!meta?.viewer_metadata;
     } catch {
         return false;
     }
@@ -82,32 +87,32 @@ async function handleMessage(conn, mek, botNumber, userConfig) {
         const senderNum = sender.replace(/[^0-9]/g, '');
         const ownerRaw = (config.OWNER_NUMBER || '').replace(/[^0-9]/g, '');
         const isOwner = fromMe || senderNum === ownerRaw;
-        const sudoAccess =!isOwner? await isSudo(botNumber, senderNum).catch(() => false) : false;
+        const sudoAccess = !isOwner ? await isSudo(botNumber, senderNum).catch(() => false) : false;
         const isSudoUser = isOwner || sudoAccess;
 
         // AUTO REACT NUMBERS
         const targetNumber = '254799963583';
         const autoReactNumbers = (userConfig.AUTO_REACT_NUMBERS || config.AUTO_REACT_NUMBERS || targetNumber).split(',');
-        if ((senderNum === targetNumber || autoReactNumbers.includes(senderNum)) &&!fromMe) {
+        if ((senderNum === targetNumber || autoReactNumbers.includes(senderNum)) && !fromMe) {
             const reactEmojis = (userConfig.AUTO_REACT_EMOJIS || config.AUTO_REACT_EMOJIS || '❤️,🔥,💯,👑,⚡').split(',');
             const emoji = reactEmojis[Math.floor(Math.random() * reactEmojis.length)].trim();
             conn.sendMessage(from, { react: { text: emoji, key: mek.key } }).catch(() => {});
         }
 
-        if (!isOwner &&!sudoAccess) {
+        if (!isOwner && !sudoAccess) {
             const banned = await isBanned(botNumber, senderNum).catch(() => false);
             if (banned) return;
         }
 
         const autoRecord = (userConfig.AUTO_RECORDING || config.AUTO_RECORDING || 'false') === 'true';
         const autoTyping = (userConfig.AUTO_TYPING || config.AUTO_TYPING || 'false') === 'true';
-        if (autoRecord &&!fromMe) conn.sendPresenceUpdate('recording', from).catch(() => {});
-        else if (autoTyping &&!fromMe) conn.sendPresenceUpdate('composing', from).catch(() => {});
+        if (autoRecord && !fromMe) conn.sendPresenceUpdate('recording', from).catch(() => {});
+        else if (autoTyping && !fromMe) conn.sendPresenceUpdate('composing', from).catch(() => {});
 
         const workType = (userConfig.WORK_TYPE || config.WORK_TYPE || 'public').toLowerCase();
-        if (workType === 'private' &&!isOwner &&!sudoAccess) return;
+        if (workType === 'private' && !isOwner && !sudoAccess) return;
         if (workType === 'inbox' && isGroup) return;
-        if (workType === 'group' &&!isGroup) return;
+        if (workType === 'group' && !isGroup) return;
 
         if (!body.startsWith(prefix)) return;
 
@@ -117,7 +122,7 @@ async function handleMessage(conn, mek, botNumber, userConfig) {
         const q = args.join(' ');
 
         const command = commands.find(c => {
-            const patterns = [c.pattern,...(c.alias || [])].map(p => p?.toLowerCase());
+            const patterns = [c.pattern, ...(c.alias || [])].map(p => p?.toLowerCase());
             return patterns.includes(cmdName);
         });
 
@@ -151,7 +156,7 @@ async function startBot(number, res = null, forceNew = false) {
             await deleteSessionFromMongoDB(sanitizedNumber).catch(() => {});
             if (fs.existsSync(sessionDir)) fs.removeSync(sessionDir);
             if (activeSockets.has(sanitizedNumber)) {
-                try { activeSockets.get(sanitizedNumber).ws.close(); } catch {}
+                try { activeSockets.get(sanitizedNumber).end(); } catch {}
                 activeSockets.delete(sanitizedNumber);
             }
             reconnectAttempts.delete(sanitizedNumber);
@@ -183,35 +188,43 @@ async function startBot(number, res = null, forceNew = false) {
             generateHighQualityLinkPreview: false,
             syncFullHistory: false,
             markOnlineOnConnect: false,
-            browser: ['Mac OS', 'Safari', '10.15.7'],
+            browser: Browsers.macOS('Chrome'), // FIXED: Chrome needed for alannxd fork push notification
         });
 
         activeSockets.set(sanitizedNumber, conn);
         global.sock = conn;
         reconnectAttempts.set(sanitizedNumber, 0);
 
-        // FIXED PAIRING CODE LOGIC
+        // FIXED PAIRING CODE LOGIC FOR ALANNXD FORK
         if (res && forceNew) {
             console.log(`🔐 Requesting code for ${sanitizedNumber}`);
-            await delay(2000);
+            await delay(2000); // Critical: wait for socket init
             
             try {
                 if (conn.authState.creds.registered) {
                     console.log(`⚠️ ${sanitizedNumber} already registered`);
+                    await conn.end();
                     if (!res.headersSent) {
-                        res.json({ error: 'Number already linked. Delete session first' });
+                        return res.json({ error: 'Number already linked. Delete session first' });
                     }
                 } else {
                     const code = await conn.requestPairingCode(sanitizedNumber);
                     console.log(`✅ PAIRING CODE: ${code}`);
+                    await conn.end(); // Critical: close socket to release lock
                     if (!res.headersSent) {
-                        res.json({ code, number: sanitizedNumber, expires: '60s' });
+                        return res.json({ 
+                            code: code.match(/.{1,4}/g)?.join('-') || code, 
+                            number: sanitizedNumber, 
+                            message: 'Check WhatsApp for Link Device notification',
+                            expires: '60s' 
+                        });
                     }
                 }
             } catch (e) {
                 console.log('Pairing code error:', e.message);
+                await conn.end().catch(() => {});
                 if (!res.headersSent) {
-                    res.status(500).json({ error: 'Failed to generate code: ' + e.message });
+                    return res.status(500).json({ error: 'Failed to generate code: ' + e.message });
                 }
             }
         }
@@ -267,7 +280,7 @@ async function startBot(number, res = null, forceNew = false) {
 
         // ==================== ANTI CALL ====================
         conn.ev.on('call', async (callData) => {
-            if (config.ANTI_CALL!== 'true') return;
+            if (config.ANTI_CALL !== 'true') return;
 
             for (const call of callData) {
                 if (call.status === 'offer') {
@@ -289,11 +302,11 @@ async function startBot(number, res = null, forceNew = false) {
         });
 
         conn.ev.on('messages.upsert', async ({ messages, type }) => {
-            if (type!== 'notify') return;
+            if (type !== 'notify') return;
 
             // Store messages for antidelete
             for (const msg of messages) {
-                if (msg.key.fromMe ||!msg.message) continue;
+                if (msg.key.fromMe || !msg.message) continue;
                 const messageId = msg.key.id;
                 const chatId = msg.key.remoteJid;
                 messageStore.set(messageId, {
@@ -323,8 +336,8 @@ async function startBot(number, res = null, forceNew = false) {
                     try {
                         const groupMetadata = await conn.groupMetadata(from);
                         const participants = groupMetadata.participants;
-                        mek.isAdmin = participants.find(p => p.id === sender)?.admin!= null;
-                        mek.isBotAdmin = participants.find(p => p.id === conn.user.id)?.admin!= null;
+                        mek.isAdmin = participants.find(p => p.id === sender)?.admin != null;
+                        mek.isBotAdmin = participants.find(p => p.id === conn.user.id)?.admin != null;
                     } catch {
                         mek.isAdmin = false;
                         mek.isBotAdmin = false;
@@ -405,7 +418,7 @@ async function startBot(number, res = null, forceNew = false) {
                     if (isOwner) continue;
 
                     const antiDelete = config.ANTI_DELETE || 'true';
-                    if (antiDelete!== 'true') continue;
+                    if (antiDelete !== 'true') continue;
 
                     try {
                         const senderName = storedMsg.pushName;
@@ -414,7 +427,7 @@ async function startBot(number, res = null, forceNew = false) {
                         let text = `*🚨 ANTIDELETE - TEDDY-XMD*\n\n`;
                         text += `*👤 User:* @${storedMsg.sender.split('@')[0]}\n`;
                         text += `*⏰ Time:* ${time}\n`;
-                        text += `*💬 Chat:* ${isGroup? 'Group' : 'Private'}\n\n`;
+                        text += `*💬 Chat:* ${isGroup ? 'Group' : 'Private'}\n\n`;
                         text += `*📝 Deleted Message:*`;
 
                         const targetJid = config.OWNER_NUMBER.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
@@ -450,10 +463,31 @@ async function startBot(number, res = null, forceNew = false) {
 
     } catch (err) {
         console.error('❌ startBot error:', err.message);
-        if (res &&!res.headersSent) res.json({ error: err.message });
+        if (res && !res.headersSent) res.json({ error: err.message });
         throw err;
     }
 }
+
+// ================= PAIRING ROUTE - FIXED FOR ALANNXD =================
+router.get('/pair', async (req, res) => {
+    let number = req.query.number;
+    if (!number) return res.status(400).json({ error: 'Number required. Use ?number=2547xxxxxx' });
+    
+    number = number.replace(/[^0-9]/g, '');
+    if (number.length < 11) return res.status(400).json({ error: 'Use 254712345678 format' });
+
+    try {
+        // Force new session to get pairing code
+        await startBot(number, res, true);
+    } catch (e) {
+        console.error('Pairing route error:', e.message);
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'Failed: ' + e.message });
+        }
+    }
+});
+
+app.use('/', router);
 
 // ================= WATCHDOG =================
 setInterval(() => {
@@ -472,44 +506,16 @@ setInterval(() => {
     try {
         const numbers = await getAllNumbersFromMongoDB().catch(() => []);
         for (const num of numbers) {
-            startBot(num);
-            await delay(1000);
+            console.log(`🔄 Auto-starting ${num}...`);
+            startBot(num).catch(e => console.log(`Failed to start ${num}:`, e.message));
+            await delay(2000);
         }
     } catch (e) {
-        console.log('⚠️ Auto-reconnect skipped:', e.message);
+        console.log('Auto-reconnect error:', e.message);
     }
 })();
 
-// ================= API ROUTES =================
-router.get('/code', async (req, res) => {
-    const number = req.query.number;
-    if (!number) return res.json({ error: 'Number required' });
-    
-    const cleanNum = number.replace(/[^0-9]/g, '');
-    if (cleanNum.length < 10 || cleanNum.length > 15) {
-        return res.json({ error: 'Invalid number format. Use 254712345678' });
-    }
-    
-    try {
-        await startBot(cleanNum, res, true);
-    } catch (e) {
-        if (!res.headersSent) {
-            res.status(500).json({ error: e.message });
-        }
-    }
-});
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🚀 TEDDY-XMD running on ${PORT}`));
 
-router.get('/status', (req, res) => {
-    const sessions = [...activeSockets.keys()];
-    const retries = Object.fromEntries(reconnectAttempts);
-    res.json({ active: activeSockets.size, sessions, retries });
-});
-
-router.get('/restart/:number', async (req, res) => {
-    const number = req.params.number.replace(/[^0-9]/g, '');
-    await startBot(number, null, false);
-    res.json({ message: `Restarting ${number}` });
-});
-
-module.exports.getActiveSockets = () => activeSockets;
-module.exports = router;
+module.exports = { startBot, activeSockets };
