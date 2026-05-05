@@ -29,10 +29,7 @@ const pino = require('pino');
 const express = require('express');
 const cors = require('cors');
 
-const app = express();
-app.use(express.json());
-app.use(cors());
-app.use(express.static('public'));
+// Express app managed by index.js
 
 global.prefix = config.PREFIX || '.';
 
@@ -228,26 +225,6 @@ async function startBot(number, res = null, forceNew = false) {
     }
 }
 
-// ================= WEB ROUTES =================
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'pair.html'));
-});
-
-app.get('/ping', (req, res) => {
-    res.json({ status: 'TEDDY-XMD Running', activeBots: activeSockets.size });
-});
-
-app.get('/pair', async (req, res) => {
-    let number = req.query.number;
-    if (!number) return res.status(400).json({ error: 'Number required' });
-    number = number.replace(/[^0-9]/g, '');
-    if (number.length < 11) return res.status(400).json({ error: 'Use 254712345678 format' });
-    try { await startBot(number, res, true); } 
-    catch (e) { if (!res.headersSent) res.status(500).json({ error: e.message }); }
-});
-
-// CRITICAL: Bind to 0.0.0.0 for Heroku
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 TEDDY-XMD running on ${PORT}`));
+// ✅ Routes and server managed by index.js
 
 module.exports = { startBot, activeSockets };
