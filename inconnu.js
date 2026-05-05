@@ -23,13 +23,17 @@ const {
     deleteSessionFromMongoDB
 } = require('./lib/database');
 
+const { Session } = require('./lib/database');
 const path = require('path');
 const fs = require('fs-extra');
 const pino = require('pino');
 const express = require('express');
 const cors = require('cors');
 
-// Express app managed by index.js
+const app = express();
+app.use(express.json());
+app.use(cors());
+app.use(express.static('public'));
 
 global.prefix = config.PREFIX || '.';
 
@@ -126,21 +130,44 @@ async function startBot(number, res = null, forceNew = false) {
         }
 
         if (!forceNew) {
-            const existingSession = await getSessionFromMongoDB(sanitizedNumber).catch(() => null);
-            if (existingSession) {
-                fs.ensureDirSync(sessionDir);
-                fs.writeFileSync(path.join(sessionDir, 'creds.json'), JSON.stringify(existingSession));
+            const existingSession = await Session.findOne({ number: sanitizedNumber });
+
+            if (!existingSession) {
+                console.log(`🧹 No MongoDB session found for ${sanitizedNumber} - requiring NEW pairing`);
+                if (fs.existsSync(sessionDir)) {
+                    await fs.remove(sessionDir);
+                    console.log(`🗑️ Cleaned leftover local session for ${sanitizedNumber}`);
+                }
+            } else {
+                const restoredCreds = await getSessionFromMongoDB(sanitizedNumber);
+                if (restoredCreds) {
+                    fs.ensureDirSync(sessionDir);
+                    fs.writeFileSync(path.join(sessionDir, 'creds.json'), JSON.stringify(restoredCreds, null, 2));
+                    console.log(`🔄 Restored existing session from MongoDB for ${sanitizedNumber}`);
+                }
             }
         }
 
         const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
-        const logger = pino({ level: 'silent' });
+        const logger = pino({ level: process.env.NODE_ENV === 'production' ? 'fatal' : 'debug' });
 
         const conn = makeWASocket({
-            auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, logger) },
+            auth: {
+                creds: state.creds,
+                keys: makeCacheableSignalKeyStore(state.keys, logger),
+            },
             printQRInTerminal: false,
-            logger: logger,
-            browser: Browsers.macOS('Chrome'), // CRITICAL: Triggers WhatsApp push on alannxd fork
+            logger: pino({ level: 'silent' }),
+            version: [2, 3000, 1033105955],
+            connectTimeoutMs: 60000,
+            defaultQueryTimeoutMs: 0,
+            keepAliveIntervalMs: 10000,
+            emitOwnEvents: true,
+            fireInitQueries: true,
+            generateHighQualityLinkPreview: true,
+            syncFullHistory: true,
+            markOnlineOnConnect: true,
+            browser: ['Mac OS', 'Safari', '10.15.7'],
         });
 
         activeSockets.set(sanitizedNumber, conn);
@@ -148,32 +175,36 @@ async function startBot(number, res = null, forceNew = false) {
         reconnectAttempts.set(sanitizedNumber, 0);
 
         if (res && forceNew) {
-            await delay(2000);
-            try {
-                if (conn.authState.creds.registered) {
-                    await conn.end();
-                    if (!res.headersSent) return res.json({ error: 'Number already linked' });
-                } else {
+            if (!conn.authState.creds.registered) {
+                console.log(`🔐 Starting NEW pairing process for ${sanitizedNumber}`);
+                try {
+                    await delay(1500);
                     const code = await conn.requestPairingCode(sanitizedNumber);
-                    await conn.end();
                     if (!res.headersSent) {
-                        return res.json({ 
-                            code: code.match(/.{1,4}/g)?.join('-') || code, 
-                            number: sanitizedNumber
-                        });
+                        res.send({ code, status: 'new_pairing' });
                     }
+                } catch (e) {
+                    console.error(`Failed to request pairing code:`, e.message);
+                    if (!res.headersSent) {
+                        res.status(500).send({ error: 'Failed to get pairing code', status: 'error', message: e.message });
+                    }
+                    throw e;
                 }
-            } catch (e) {
-                await conn.end().catch(() => {});
-                if (!res.headersSent) return res.status(500).json({ error: e.message });
+            } else {
+                console.log(`✅ Using existing session for ${sanitizedNumber}`);
+                if (!res.headersSent) res.json({ status: 'already_linked', number: sanitizedNumber });
             }
         }
 
         conn.ev.on('creds.update', async () => {
             await saveCreds();
             try {
-                const creds = JSON.parse(fs.readFileSync(path.join(sessionDir, 'creds.json'), 'utf-8'));
+                const fileContent = await fs.readFile(path.join(sessionDir, 'creds.json'), 'utf8');
+                const creds = JSON.parse(fileContent);
+                const existingSession = await Session.findOne({ number: sanitizedNumber });
+                const isNewSession = !existingSession;
                 saveSessionToMongoDB(sanitizedNumber, creds).catch(() => {});
+                if (isNewSession) console.log(`💾 New session saved to MongoDB for ${sanitizedNumber}`);
             } catch {}
         });
 
@@ -225,6 +256,26 @@ async function startBot(number, res = null, forceNew = false) {
     }
 }
 
-// ✅ Routes and server managed by index.js
+// ================= WEB ROUTES =================
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'pair.html'));
+});
+
+app.get('/ping', (req, res) => {
+    res.json({ status: 'TEDDY-XMD Running', activeBots: activeSockets.size });
+});
+
+app.get('/pair', async (req, res) => {
+    let number = req.query.number;
+    if (!number) return res.status(400).json({ error: 'Number required' });
+    number = number.replace(/[^0-9]/g, '');
+    if (number.length < 11) return res.status(400).json({ error: 'Use 254712345678 format' });
+    try { await startBot(number, res, true); } 
+    catch (e) { if (!res.headersSent) res.status(500).json({ error: e.message }); }
+});
+
+// CRITICAL: Bind to 0.0.0.0 for Heroku
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 TEDDY-XMD running on ${PORT}`));
 
 module.exports = { startBot, activeSockets };
